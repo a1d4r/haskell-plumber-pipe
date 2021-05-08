@@ -1,0 +1,72 @@
+name:                my-project
+version:             0.1.0.0
+github:              "iu-haskell-spring-2021/project-template"
+license:             BSD3
+author:              "Nikolai Kudasov"
+maintainer:          "n.kudasov@innopolis.ru"
+copyright:           "2021 Innopolis University"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/iu-haskell-spring-2021/project-template#readme>
+
+custom-setup:
+  dependencies:
+  - base
+  - Cabal
+  - cabal-doctest >=1.0.2 && <1.1
+
+ghc-options:
+- -Wall -fno-warn-type-defaults
+
+dependencies:
+- base >= 4.7 && < 5
+- codeworld-api
+
+library:
+  source-dirs: src
+
+executables:
+  my-project-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - my-project
+
+tests:
+  spec:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - my-project
+    - hspec
+    - HUnit
+    - QuickCheck
+
+  doctests:
+    source-dirs: test
+    main: doctests.hs
+    other-modules: []
+    dependencies:
+    - base
+    - doctest
+    - Glob
+    - QuickCheck
+    - template-haskell
