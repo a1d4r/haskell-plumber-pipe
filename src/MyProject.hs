@@ -44,7 +44,7 @@ handleFlows (Flows flowLevel t toCheck) (KeyPress "Up") =
         else checkIfWon
 
       checkIfWon =
-        if not (isSeeping (concat flowLevel)) && reachedEnd (concat flowLevel)
+        if not (isLeaking (concat flowLevel)) && reachedEnd (concat flowLevel)
         then Won (drawFlowScreen flowLevel (t + dt) toCheck)
         else Lost (drawFlowScreen flowLevel (t + dt) toCheck)
 
@@ -52,19 +52,19 @@ handleFlows (Flows flowLevel t toCheck) (KeyPress "Up") =
 
       isEnd = flowLevel == fst wave
 
-      isSeeping [] = False
-      isSeeping (c : rest) =
+      isLeaking [] = False
+      isLeaking (c : rest) =
         case c of
-          FilledCell Nothing -> True
-          _ -> isSeeping rest
+          FilledCell _ True -> True
+          _ -> isLeaking rest
 
       reachedEnd [] = False
       reachedEnd (c : rest) =
         case c of
-          FilledCell (Just DestinationPipe) -> True
+          FilledCell (Just DestinationPipe) _ -> True
           _ -> reachedEnd rest
 
-handleFlows state _ = state 
+handleFlows state _ = state
 
 -- | Try update an element at a given position in a list.
 updateListAt :: Int -> (a -> a) -> [a] -> [a]
@@ -88,8 +88,26 @@ waveAlgorithm flowLevel ((rowIndex, colIndex) : rest) acc = waveAlgorithm updFlo
     updFlowLevel = updateListAt rowIndex changeRow flowLevel
     changeRow = updateListAt colIndex changeCol
     changeCol c = case c of
-                    FilledCell c' -> FilledCell c'
-                    EmptyCell c' -> FilledCell c'
+                    FilledCell c' leaking -> FilledCell c' leaking
+                    EmptyCell c' -> FilledCell c' (isLeaking c')
+
+    isLeaking c' = isLeakingUp c' || isLeakingRight c' || isLeakingLeft c' || isLeakingDown c'
+
+    isLeakingUp (Just (ConnectivePipe True _ _ _)) = (rowIndex - 1, colIndex) `notElem` updAcc && not (isFilled (rowIndex - 1, colIndex)) -- && null (getIfConnected Above)
+    isLeakingUp _ = False
+
+    isLeakingRight (Just (ConnectivePipe _ True _ _)) = (rowIndex, colIndex + 1) `notElem` updAcc && not (isFilled (rowIndex, colIndex + 1)) -- && null (getIfConnected ToRight)
+    isLeakingRight _ = False
+
+    isLeakingLeft (Just (ConnectivePipe _ _ True _)) = (rowIndex, colIndex - 1) `notElem` updAcc && not (isFilled (rowIndex, colIndex - 1)) -- && null (getIfConnected ToLeft)
+    isLeakingLeft _ = False
+
+    isLeakingDown (Just (ConnectivePipe _ _ _ True)) = (rowIndex + 1, colIndex) `notElem` updAcc && not (isFilled (rowIndex + 1, colIndex)) -- && null (getIfConnected Below)
+    isLeakingDown _ = False
+
+    isFilled (y, x) = case fmap (getListElemAt x) (getListElemAt y flowLevel) of
+                        Just (Just (FilledCell _ _)) -> True
+                        _ -> False
 
     updAcc = Data.List.nub (acc ++ addNeigborsToCheck)
 
@@ -127,8 +145,8 @@ waveAlgorithm flowLevel ((rowIndex, colIndex) : rest) acc = waveAlgorithm updFlo
 
         pipe1 = case fmap (getListElemAt colIndex) (getListElemAt rowIndex flowLevel) of
                   Just (Just (EmptyCell (Just p))) -> p
-                  Just (Just (FilledCell (Just p))) -> p
-                  _ -> (ConnectivePipe False False False False )
+                  Just (Just (FilledCell (Just p) _)) -> p
+                  _ -> ConnectivePipe False False False False
 
         calcPosition = case relPos of
                         Above -> (rowIndex - 1, colIndex)
@@ -138,8 +156,8 @@ waveAlgorithm flowLevel ((rowIndex, colIndex) : rest) acc = waveAlgorithm updFlo
 
         pipe2 = case fmap (getListElemAt (snd calcPosition)) (getListElemAt (fst calcPosition) flowLevel) of
                 Just (Just (EmptyCell (Just p))) -> p
-                Just (Just (FilledCell (Just p))) -> p
-                _ -> (ConnectivePipe False False False False )
+                Just (Just (FilledCell (Just p) _)) -> p
+                _ -> ConnectivePipe False False False False
 
 
 -- | Check if 2 pipes are connected given their types and relative position
@@ -154,8 +172,8 @@ arePipesConnected (ConnectivePipe _ True _ _) (ConnectivePipe _ _ True _) ToRigh
 arePipesConnected (ConnectivePipe _ _ True _) (ConnectivePipe _ True _ _) ToLeft = True
 arePipesConnected (ConnectivePipe _ _ _ True) (ConnectivePipe True _ _ _) Below = True
 
-arePipesConnected (ConnectivePipe _ True _ _) DestinationPipe ToRight = True 
-arePipesConnected SourcePipe (ConnectivePipe _ _ True _) ToRight = True 
+arePipesConnected (ConnectivePipe _ True _ _) DestinationPipe ToRight = True
+arePipesConnected SourcePipe (ConnectivePipe _ _ True _) ToRight = True
 
 arePipesConnected _ _ _ = False
 
@@ -188,10 +206,11 @@ drawFlowScreen flowLevel _ _ = pictures listOfPictures
     listOfPictures
       = map (\(rowIndex, colIndex, fc)
              -> case fc of
-                  FilledCell c -> colored blue (drawCellAt colIndex (-rowIndex) c)
+                  FilledCell c isLeaking -> colored (getColor isLeaking) (drawCellAt colIndex (-rowIndex) c)
                   EmptyCell c -> drawCellAt colIndex (-rowIndex) c)
         (concat (levelWithIndeces flowLevel))
 
+    getColor isLeaking = if isLeaking then red else blue
 
 
 -- | Adds indeces to each element in the list
@@ -279,7 +298,7 @@ type Cell = Maybe Pipe
 
 -- | A cell which can be either empty or filled with water 
 data FlowCell
-  = FilledCell Cell
+  = FilledCell Cell Bool
   | EmptyCell Cell
   deriving (Show, Eq)
 
@@ -328,7 +347,7 @@ reprOfLevel1 =
   , "┃ ┗ ━ ┻ ━ ┛ ┃ . ┏ ┓"
   , "┗ ┳ ━ ┳ ━ ━ ╋ ━ ┛ ┃"
   , ". ┃ . ┃ ┏ ━ ┻ ━ ━ ┛"
-  , ". ┃ ┏ ┛ ┃ . . . . ."
+  , ". ┃ ┃ ┛ ┃ . . . . ."
   , ". ┗ ┛ . ┗ ━ ━ ━ ━ ╾"
   ]
 
