@@ -6,10 +6,14 @@ module MyProject where
 
 import CodeWorld
 import Data.List.Split
+import System.Random
 
 
 run :: IO ()
-run = activityOf StartMenu handleGame drawGame
+run = do
+  g <- newStdGen 
+  print ""
+  -- activityOf StartMenu handleGame drawGame
 
 handleGame :: Event -> GameState -> GameState
 handleGame event gameState =
@@ -69,14 +73,14 @@ data GameState
   | Flows FlowLevel Double -- ^ Player opened a valve
 
 -- | Pipe that connects sides specified by True
--- | sides are specified in order Up, Right, Down, Left
+-- | sides are specified in order Up, Right, Left, Down
 data Pipe
   = ConnectivePipe   -- ^ Pipes connecting several sides, open sides are marked as True
   {
     up :: Bool,
     right :: Bool,
-    left :: Bool,
-    down :: Bool
+    down :: Bool,
+    left :: Bool
   }
   | SourcePipe
   | DestinationPipe
@@ -139,6 +143,21 @@ reprOfLevel1 =
   , ". ┗ ┛ . ┗ ━ ━ ━ ━ ╾"
   ]
 
-
 level1 :: Level
 level1 = stringsToLevel reprOfLevel1
+
+-- | Rotate a pipe by 90 degrees in clockwise direction specified number of times
+rotatePipeClockwise :: Int -> Pipe -> Pipe
+rotatePipeClockwise n p
+  | n <= 0 = p
+  | otherwise =
+    case p of
+      (ConnectivePipe u r d l) -> rotatePipeClockwise (n - 1) (ConnectivePipe l u r d)
+      _ -> p 
+
+-- | Rotate a pipe randomly
+rotatePipeRandomly :: Pipe -> IO Pipe
+rotatePipeRandomly p = do
+  n <- randomRIO (0, 3)
+  return (rotatePipeClockwise n p)
+
