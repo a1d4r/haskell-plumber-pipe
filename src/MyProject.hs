@@ -4,8 +4,7 @@
 module MyProject where
 
 import CodeWorld
-import Data.Text as Text
-
+import qualified Data.Text as Text
 
 run :: IO ()
 -- run = activityOf StartMenu handleGame drawGame
@@ -14,7 +13,7 @@ handleGame :: Event -> GameState -> GameState
 handleGame event gameState =
   case gameState of
     StartMenu -> handleMenu event
-    Won pic   -> handleEndScreen event 
+    Won pic   -> handleEndScreen event
     Lost pic  -> handleEndScreen event
     InGame lvl -> handleLevel (InGame lvl) event
     Flows flowLvl t -> handleFlows (Flows flowLvl t) event
@@ -33,12 +32,12 @@ handleFlows :: GameState -> Event -> GameState
 handleFlows event = _
 
 drawGame :: GameState -> Picture
-drawGame gameState =  
+drawGame gameState =
   case gameState of
     StartMenu -> drawMenu
     Won pic -> drawWonScreen
     Lost pic -> drawLostScreen
-    InGame lvl -> drawLevel lvl 
+    InGame lvl -> drawLevel lvl
     Flows flowLevel t -> drawFlowScreen flowLevel t
 
 drawMenu :: Picture
@@ -50,41 +49,51 @@ drawWonScreen = _
 drawLostScreen :: Picture
 drawLostScreen = _
 
-drawLevel :: Level -> Picture
-drawLevel lvl = _
-
 drawFlowScreen :: FlowLevel -> Double -> Picture
-drawFlowScreen flowLvl t = _ 
+drawFlowScreen flowLvl t = _
+
+levelWithIndeces :: Level -> [[(Int, Int, Cell)]]
+levelWithIndeces = zipWith (\ rowIndex row
+  -> zipWith (\ colIndex c -> (rowIndex, colIndex, c)) [0 .. ] row) [0..]
+
+-- | Draw current state of the game
+drawLevel :: Level -> Picture
+drawLevel level = pictures listOfPicture
+  where
+    listOfPicture = map(\(rowIndex, colIndex, cell)
+                        -> drawCellAt colIndex (-rowIndex) cell)
+                       (concat (levelWithIndeces level))
 
 -- | Draw a signle pipe
 drawPipe :: Pipe -> Picture
 drawPipe SourcePipe = lettering (Text.pack "\x2707")
 drawPipe DestinationPipe = lettering (Text.pack "\x1F6C0")
 drawPipe (ConnectivePipe False True True False) -- "━"
-   = solidRectangle 1 0.2  
+   = solidRectangle 1 0.2
 drawPipe (ConnectivePipe True False False True) -- "┃"
-  = solidRectangle 0.2 1  
+  = solidRectangle 0.2 1
 drawPipe (ConnectivePipe True False True False)  -- "┛"
   = solidPolygon [(-0.5, -0.1), (0.1, -0.1), (0.1, 0.5), (-0.1, 0.5), (-0.1, 0.1), (-0.5, 0.1)]
 drawPipe (ConnectivePipe False False True True) -- "┓"
   = rotated (pi/2) (drawPipe (ConnectivePipe True False True False))
 drawPipe (ConnectivePipe False True False True) -- "┏"
-  = rotated (pi) (drawPipe (ConnectivePipe True False True False))
+  = rotated pi (drawPipe (ConnectivePipe True False True False))
 drawPipe (ConnectivePipe True True False False) -- "┗"
   = rotated (-pi/2) (drawPipe (ConnectivePipe True False True False))
 drawPipe (ConnectivePipe True True True False) -- "┻"
-  = solidPolygon [(-0.5, -0.1), (0.5, -0.1), (0.5, 0.1), 
-                  (0.1, 0.1), (0.1, 0.5), (-0.1, 0.5), 
+  = solidPolygon [(-0.5, -0.1), (0.5, -0.1), (0.5, 0.1),
+                  (0.1, 0.1), (0.1, 0.5), (-0.1, 0.5),
                   (-0.1, 0.1), (-0.5, 0.1)]
 drawPipe (ConnectivePipe True False True True) -- "┫"
   = rotated (pi/2) (drawPipe (ConnectivePipe True True True False))
 drawPipe (ConnectivePipe True True False True) -- "┣"
   = rotated (-pi/2) (drawPipe (ConnectivePipe True True True False))
 drawPipe (ConnectivePipe False True True True) -- "┳"
-  = rotated (pi) (drawPipe (ConnectivePipe True True True False))
+  = rotated pi (drawPipe (ConnectivePipe True True True False))
 drawPipe (ConnectivePipe True True True True) -- "╋"
-  = drawPipe (ConnectivePipe True False True True)  
+  = drawPipe (ConnectivePipe True False True True)
     <> drawPipe (ConnectivePipe True True False True)
+drawPipe _ = blank
 
 
 -- | Draw one cell at given coordinates
@@ -95,11 +104,12 @@ drawCellAt i j cell = translated x y
     x = fromIntegral i
     y = fromIntegral j
     cellPicture =
-      case cell of 
-        Nothing -> blank
-        Just p  -> drawPipe p
+      maybe blank drawPipe cell
+      -- case cell of 
+      --   Nothing -> blank
+      --   Just p  -> drawPipe p
 
-data GameState 
+data GameState
   = StartMenu              -- ^ Start menu
   | Won Picture            -- ^ Player won (connected pipes correctly)
   | Lost Picture           -- ^ Player lost (water leakage)
@@ -108,16 +118,17 @@ data GameState
 
 -- | Pipe that connects sides specified by True
 -- | sides are specified in order Up, Right, Down, Left
-data Pipe 
+data Pipe
   = ConnectivePipe   -- ^ Pipes connecting several sides
   {                  -- ^ open sides are marked as True
     up :: Bool,
-    right :: Bool, 
-    left :: Bool, 
-    down :: Bool 
+    right :: Bool,
+    left :: Bool,
+    down :: Bool
   }
   | SourcePipe
   | DestinationPipe
+  deriving (Show)
 
 -- | A cell is either empty or has pipe in it
 -- | Some Cells are meant to be empty by designers of the level
@@ -134,5 +145,4 @@ type FlowLevel = [[FlowCell]]
 
 -- | Empty level of size n x m
 emptyLevel :: (Int, Int) -> Level
-emptyLevel (n, m) = Prelude.replicate n (Prelude.replicate m Nothing)
-
+emptyLevel (n, m) = replicate n (replicate m Nothing)
