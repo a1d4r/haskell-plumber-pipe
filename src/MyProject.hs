@@ -2,6 +2,7 @@
 {-# LANGUAGE UnicodeSyntax #-}
 {-# OPTIONS_GHC -Wall #-}
 {-# OPTIONS_GHC -fdefer-typed-holes -fshow-hole-constraints -funclutter-valid-hole-fits #-}
+{-# OPTIONS_GHC -Wno-typed-holes #-}
 module MyProject where
 
 import CodeWorld
@@ -11,7 +12,7 @@ import System.Random
 
 run :: IO ()
 run = do
-  g <- newStdGen 
+  g <- newStdGen
   print ""
   -- activityOf StartMenu handleGame drawGame
 
@@ -82,8 +83,8 @@ data Pipe
     down :: Bool,
     left :: Bool
   }
-  | SourcePipe
-  | DestinationPipe
+  | SourcePipe       -- ^ Horizontal source pipe (water flows from left to right)
+  | DestinationPipe  -- ^ Horizontal destination pipe (water flows from left to right)
   deriving (Show)
 
 -- | A cell is either empty or has pipe in it
@@ -153,7 +154,7 @@ rotatePipeClockwise n p
   | otherwise =
     case p of
       (ConnectivePipe u r d l) -> rotatePipeClockwise (n - 1) (ConnectivePipe l u r d)
-      _ -> p 
+      _ -> p
 
 -- | Rotate a pipe randomly
 rotatePipeRandomly :: Pipe -> IO Pipe
@@ -161,3 +162,12 @@ rotatePipeRandomly p = do
   n <- randomRIO (0, 3)
   return (rotatePipeClockwise n p)
 
+-- | Randomly rotate all the pipes in the level
+randomizeLevel :: Level -> IO Level
+randomizeLevel = mapM (mapM randomizeCell)
+  where
+    randomizeCell :: Cell -> IO Cell
+    randomizeCell cell =
+      case cell of
+        Just pipe -> fmap Just (rotatePipeRandomly pipe)
+        Nothing   -> return cell
