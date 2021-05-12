@@ -10,7 +10,7 @@ import qualified Data.List.Split as Split
 import qualified Data.List
 
 run :: IO ()
-run = activityOf (Flows (levelToFlowLevel level1) 1000.0 [(0, 1)]) handleGame drawGame
+run = activityOf (Flows (levelToFlowLevel level1) 1000.0 [(0, 0)]) handleGame drawGame
 -- run = drawingOf (drawCellAt 1 1 (Just (ConnectivePipe True True True True)))
 handleGame :: Event -> GameState -> GameState
 handleGame event gameState =
@@ -111,6 +111,7 @@ waveAlgorithm flowLevel ((rowIndex, colIndex) : rest) acc = waveAlgorithm updFlo
     getNotFilledCell ToRight
       = case fmap (getListElemAt (colIndex + 1)) (getListElemAt rowIndex flowLevel) of
           Just (Just (EmptyCell (Just ConnectivePipe {}))) -> getIfConnected ToRight
+          Just (Just (EmptyCell (Just DestinationPipe))) -> getIfConnected ToRight
           _ -> []
 
     getNotFilledCell ToLeft
@@ -152,6 +153,10 @@ arePipesConnected (ConnectivePipe True _ _ _) (ConnectivePipe _ _ _ True) Above 
 arePipesConnected (ConnectivePipe _ True _ _) (ConnectivePipe _ _ True _) ToRight = True
 arePipesConnected (ConnectivePipe _ _ True _) (ConnectivePipe _ True _ _) ToLeft = True
 arePipesConnected (ConnectivePipe _ _ _ True) (ConnectivePipe True _ _ _) Below = True
+
+arePipesConnected (ConnectivePipe _ True _ _) DestinationPipe ToRight = True 
+arePipesConnected SourcePipe (ConnectivePipe _ _ True _) ToRight = True 
+
 arePipesConnected _ _ _ = False
 
 
@@ -320,7 +325,7 @@ reprOfLevel1 =
   , ". ┃ ┃ ┃ . ┃ . ┃ ┏ ┛"
   , ". ┗ ┛ ┃ . ┣ ━ ┛ ┃ ."
   , "┏ ┓ . ┃ . ┃ ┏ ━ ┛ ."
-  , "┃ ┗ ┓ ┻ ━ ┛ ┃ . ┏ ┓"
+  , "┃ ┗ ━ ┻ ━ ┛ ┃ . ┏ ┓"
   , "┗ ┳ ━ ┳ ━ ━ ╋ ━ ┛ ┃"
   , ". ┃ . ┃ ┏ ━ ┻ ━ ━ ┛"
   , ". ┃ ┏ ┛ ┃ . . . . ."
