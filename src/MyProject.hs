@@ -108,10 +108,10 @@ waveAlgorithm flowLevel ((rowIndex, colIndex) : rest) acc = waveAlgorithm updFlo
     isLeakingRight (Just (ConnectivePipe _ True _ _)) = null (getNeighborIfConnected ToRight) 
     isLeakingRight _ = False
 
-    isLeakingLeft (Just (ConnectivePipe _ _ True _)) = null (getNeighborIfConnected ToLeft)
+    isLeakingLeft (Just (ConnectivePipe _ _ _ True)) = null (getNeighborIfConnected ToLeft)
     isLeakingLeft _ = False
 
-    isLeakingDown (Just (ConnectivePipe _ _ _ True)) = null (getNeighborIfConnected Below) 
+    isLeakingDown (Just (ConnectivePipe _ _ True _)) = null (getNeighborIfConnected Below) 
     isLeakingDown _ = False
 
     -- Updating the list of nodes to check in the next iteration
@@ -172,13 +172,13 @@ arePipesConnected
   -> RelativePosition   -- Position of the 2nd Pipe Relative to the 1st Pipe
   -> Bool
 
-arePipesConnected (ConnectivePipe True _ _ _) (ConnectivePipe _ _ _ True) Above = True
-arePipesConnected (ConnectivePipe _ True _ _) (ConnectivePipe _ _ True _) ToRight = True
-arePipesConnected (ConnectivePipe _ _ True _) (ConnectivePipe _ True _ _) ToLeft = True
-arePipesConnected (ConnectivePipe _ _ _ True) (ConnectivePipe True _ _ _) Below = True
+arePipesConnected (ConnectivePipe True _ _ _) (ConnectivePipe _ _ True _) Above = True
+arePipesConnected (ConnectivePipe _ True _ _) (ConnectivePipe _ _ _ True) ToRight = True
+arePipesConnected (ConnectivePipe _ _ True _) (ConnectivePipe True _ _ _) Below = True
+arePipesConnected (ConnectivePipe _ _ _ True) (ConnectivePipe _ True _ _) ToLeft = True
 
-arePipesConnected SourcePipe (ConnectivePipe _ _ True _) ToRight = True 
-arePipesConnected (ConnectivePipe _ _ True _) SourcePipe ToLeft = True
+arePipesConnected SourcePipe (ConnectivePipe _ _ _ True) ToRight = True 
+arePipesConnected (ConnectivePipe _ _ _ True) SourcePipe ToLeft = True
 
 arePipesConnected (ConnectivePipe _ True _ _) DestinationPipe ToRight = True
 arePipesConnected DestinationPipe (ConnectivePipe _ True _ _) ToLeft = True
@@ -238,31 +238,31 @@ drawLevel level = pictures listOfPicture
 drawPipe :: Pipe -> Picture
 drawPipe SourcePipe = lettering (Text.pack "\x2707")
 drawPipe DestinationPipe = lettering (Text.pack "\x1F6C0")
-drawPipe (ConnectivePipe False True True False) -- "━"
+drawPipe (ConnectivePipe False True False True) -- "━"
    = solidRectangle 1 0.2
-drawPipe (ConnectivePipe True False False True) -- "┃"
+drawPipe (ConnectivePipe True False True False) -- "┃"
   = solidRectangle 0.2 1
-drawPipe (ConnectivePipe True False True False)  -- "┛"
+drawPipe (ConnectivePipe True False False True)  -- "┛"
   = solidPolygon [(-0.5, -0.1), (0.1, -0.1), (0.1, 0.5), (-0.1, 0.5), (-0.1, 0.1), (-0.5, 0.1)]
 drawPipe (ConnectivePipe False False True True) -- "┓"
-  = rotated (pi/2) (drawPipe (ConnectivePipe True False True False))
-drawPipe (ConnectivePipe False True False True) -- "┏"
-  = rotated pi (drawPipe (ConnectivePipe True False True False))
+  = rotated (pi/2) (drawPipe (ConnectivePipe True False False True))
+drawPipe (ConnectivePipe False True True False) -- "┏"
+  = rotated pi (drawPipe (ConnectivePipe True False False True))
 drawPipe (ConnectivePipe True True False False) -- "┗"
-  = rotated (-pi/2) (drawPipe (ConnectivePipe True False True False))
-drawPipe (ConnectivePipe True True True False)  -- "┻"
+  = rotated (-pi/2) (drawPipe (ConnectivePipe True False False True))
+drawPipe (ConnectivePipe True True False True)  -- "┻"
   = solidPolygon [(-0.5, -0.1), (0.5, -0.1), (0.5, 0.1),
                   (0.1, 0.1), (0.1, 0.5), (-0.1, 0.5),
                   (-0.1, 0.1), (-0.5, 0.1)]
 drawPipe (ConnectivePipe True False True True) -- "┫"
-  = rotated (pi/2) (drawPipe (ConnectivePipe True True True False))
-drawPipe (ConnectivePipe True True False True) -- "┣"
-  = rotated (-pi/2) (drawPipe (ConnectivePipe True True True False))
+  = rotated (pi/2) (drawPipe (ConnectivePipe True True False True))
+drawPipe (ConnectivePipe True True True False) -- "┣"
+  = rotated (-pi/2) (drawPipe (ConnectivePipe True True False True))
 drawPipe (ConnectivePipe False True True True) -- "┳"
-  = rotated pi (drawPipe (ConnectivePipe True True True False))
+  = rotated pi (drawPipe (ConnectivePipe True True False True))
 drawPipe (ConnectivePipe True True True True) -- "╋"
   = drawPipe (ConnectivePipe True False True True)
-    <> drawPipe (ConnectivePipe True True False True)
+    <> drawPipe (ConnectivePipe True True True False)
 drawPipe _ = blank
 
 
@@ -329,16 +329,16 @@ stringsToLevel = map (map strToCell . Split.splitOn " ")
       case c of
         "╼" -> Just SourcePipe
         "╾" -> Just DestinationPipe
-        "┃" -> Just (ConnectivePipe True False False True)
-        "━" -> Just (ConnectivePipe False True True False)
-        "┏" -> Just (ConnectivePipe False True False True)
+        "┃" -> Just (ConnectivePipe True False True False)
+        "━" -> Just (ConnectivePipe False True False True)
+        "┏" -> Just (ConnectivePipe False True True False)
         "┓" -> Just (ConnectivePipe False False True True)
-        "┗" -> Just (ConnectivePipe True True  False False)
-        "┛" -> Just (ConnectivePipe True False True False)
-        "┣" -> Just (ConnectivePipe True True False True)
+        "┗" -> Just (ConnectivePipe True True False False)
+        "┛" -> Just (ConnectivePipe True False False True)
+        "┣" -> Just (ConnectivePipe True True True False)
         "┫" -> Just (ConnectivePipe True False True True)
         "┳" -> Just (ConnectivePipe False True True True)
-        "┻" -> Just (ConnectivePipe True True True False)
+        "┻" -> Just (ConnectivePipe True True False True)
         "╋" -> Just (ConnectivePipe True True True True)
         _ -> Nothing
 
@@ -355,7 +355,7 @@ reprOfLevel1 =
   , "┃ ┗ ━ ┻ ━ ┛ ┃ . ┏ ┓"
   , "┗ ┳ ━ ┳ ━ ━ ╋ ━ ┛ ┃"
   , ". ┃ . ┃ ┏ ━ ┻ ━ ━ ┛"
-  , ". ┃ ┃ ┛ ┃ . . . . ."
+  , ". ┃ ┏ ┛ ┃ . . . . ."
   , ". ┗ ┛ . ┗ ━ ━ ━ ━ ╾"
   ]
 
