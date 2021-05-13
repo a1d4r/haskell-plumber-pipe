@@ -34,7 +34,7 @@ handleLevel (InGame lvl) event = _
 -- | Handle waterflow after played roated the valve
 handleFlows :: GameState -> Event -> GameState
 handleFlows (Flows flowLevel secsPassed t toCheck) (TimePassing dt) = 
-  if t + dt - fromIntegral secsPassed >= 1 then updatedState else Flows flowLevel secsPassed (t + dt) toCheck
+  if t + dt - fromIntegral secsPassed >= 0.95 then updatedState else Flows flowLevel secsPassed (t + dt) toCheck
   where
     updatedState =
       if not isEnd then  Flows (fst wave) (floor (t + dt)) (t + dt) (snd wave) 
