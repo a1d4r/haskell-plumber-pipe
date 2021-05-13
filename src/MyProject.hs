@@ -10,7 +10,7 @@ import qualified Data.List.Split as Split
 import qualified Data.List
 
 run :: IO ()
-run = activityOf (Flows (levelToFlowLevel level1) 5.0 [(0, 0)]) handleGame drawGame
+run = activityOf (Flows (levelToFlowLevel level1) 1 1 [(0, 0)]) handleGame drawGame
 -- run = drawingOf (drawCellAt 1 1 (Just (ConnectivePipe True True True True)))
 handleGame :: Event -> GameState -> GameState
 handleGame event gameState =
@@ -19,7 +19,7 @@ handleGame event gameState =
     Won pic   -> handleEndScreen gameState event
     Lost pic  -> handleEndScreen gameState event
     InGame lvl -> handleLevel (InGame lvl) event
-    Flows flowLvl t toCheck -> handleFlows (Flows flowLvl t toCheck) event
+    Flows flowLvl secPassed t toCheck -> handleFlows (Flows flowLvl secPassed t toCheck) event
 
 
 handleMenu :: Event -> GameState
@@ -33,75 +33,38 @@ handleLevel (InGame lvl) event = _
 
 -- | Handle waterflow after played roated the valve
 handleFlows :: GameState -> Event -> GameState
--- handleFlows (Flows flowLevel t toCheck) (TimePassing dt) = 
---   if round(t + dt) - floor t >= 1 then updatedState else Flows flowLevel (t + dt) toCheck
---   where
---     updatedState =
---       if not isEnd then  Flows (fst wave) (t + dt) (snd wave) 
---       else finalState
+handleFlows (Flows flowLevel secsPassed t toCheck) (TimePassing dt) = 
+  if t + dt - fromIntegral secsPassed >= 1 then updatedState else Flows flowLevel secsPassed (t + dt) toCheck
+  where
+    updatedState =
+      if not isEnd then  Flows (fst wave) (floor (t + dt)) (t + dt) (snd wave) 
+      else finalState
 
---     -- | Check if new and old FlowLevels are equal
---     isEnd = flowLevel == fst wave
+    -- | Check if new and old FlowLevels are equal
+    isEnd = flowLevel == fst wave
 
---     -- | Has player won or lost
---     finalState =
---       if not (isLeaking (concat flowLevel)) && reachedEnd (concat flowLevel)
---       then Won (drawFlowScreen flowLevel)
---       else Lost (drawFlowScreen flowLevel)
+    -- | Has player won or lost
+    finalState =
+      if not (isLeaking (concat flowLevel)) && reachedEnd (concat flowLevel)
+      then Won (drawFlowScreen flowLevel)
+      else Lost (drawFlowScreen flowLevel)
 
---     -- | Executing next wave 
---     wave = waveAlgorithm flowLevel toCheck []
+    -- | Executing next wave 
+    wave = waveAlgorithm flowLevel toCheck []
 
---     -- | Check if any pipe is leaking
---     isLeaking [] = False
---     isLeaking (c : rest) =
---       case c of
---         FilledCell _ True -> True
---         _ -> isLeaking rest
+    -- | Check if any pipe is leaking
+    isLeaking [] = False
+    isLeaking (c : rest) =
+      case c of
+        FilledCell _ True -> True
+        _ -> isLeaking rest
 
---     -- | Check if player has reached the DestinationPipe
---     reachedEnd [] = False
---     reachedEnd (c : rest) =
---       case c of
---         FilledCell (Just DestinationPipe) _ -> True
---         _ -> reachedEnd rest
-
-
-handleFlows (Flows flowLevel t toCheck) (KeyPress "Up") =
-  updatedState
-    where
-
-      dt = 0.1
-
-      updatedState =
-        if not isEnd then  Flows (fst wave) (t + dt) (snd wave) 
-        else finalState
-
-      -- | Check if new and old FlowLevels are equal
-      isEnd = flowLevel == fst wave
-
-      -- | Has player won or lost
-      finalState =
-        if not (isLeaking (concat flowLevel)) && reachedEnd (concat flowLevel)
-        then Won (drawFlowScreen flowLevel)
-        else Lost (drawFlowScreen flowLevel)
-
-      -- | Executing next wave 
-      wave = waveAlgorithm flowLevel toCheck []
-
-      -- | Check if any pipe is leaking
-      isLeaking [] = False
-      isLeaking (c : rest) =
-        case c of
-          FilledCell _ True -> True
-          _ -> isLeaking rest
-
-      -- | Check if player has reached the DestinationPipe
-      reachedEnd [] = False
-      reachedEnd (c : rest) =
-        case c of
-          FilledCell (Just DestinationPipe) _ -> True
-          _ -> reachedEnd rest
+    -- | Check if player has reached the DestinationPipe
+    reachedEnd [] = False
+    reachedEnd (c : rest) =
+      case c of
+        FilledCell (Just DestinationPipe) _ -> True
+        _ -> reachedEnd rest
 
 handleFlows state _ = state
 
@@ -234,7 +197,7 @@ drawGame gameState =
     Won pic -> drawWonScreen
     Lost pic -> drawLostScreen
     InGame lvl -> drawLevel lvl
-    Flows flowLevel _ _ -> drawFlowScreen flowLevel
+    Flows flowLevel _ _ _ -> drawFlowScreen flowLevel
 
 drawMenu :: Picture
 drawMenu = _
@@ -321,7 +284,7 @@ data GameState
   | Won Picture            -- ^ Player won (connected pipes correctly)
   | Lost Picture           -- ^ Player lost (water leakage)
   | InGame Level           -- ^ Player is in game, Level is the level he plays
-  | Flows FlowLevel Double [(Int, Int)] -- ^ Player opened a valve
+  | Flows FlowLevel Int Double [(Int, Int)] -- ^ Player opened a valve
 
 -- | Pipe that connects sides specified by True
 -- | sides are specified in order Up, Right, Down, Left
