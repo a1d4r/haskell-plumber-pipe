@@ -31,33 +31,38 @@ handleEndScreen state _= state
 handleLevel :: GameState -> Event -> GameState
 handleLevel (InGame lvl) event = _
 
+-- | Handle waterflow after played roated the valve
 handleFlows :: GameState -> Event -> GameState
 handleFlows (Flows flowLevel t toCheck) (KeyPress "Up") =
   updatedState
     where
-      updatedState = afterWave
 
       dt = 0.1
 
-      afterWave =
-        if not isEnd then  Flows (fst wave) (t + dt) (snd wave)
-        else checkIfWon
+      updatedState =
+        if not isEnd then  Flows (fst wave) (t + dt) (snd wave) 
+        else finalState
 
-      checkIfWon =
+      -- | Check if new and old FlowLevels are equal
+      isEnd = flowLevel == fst wave
+
+      -- | Has player won or lost
+      finalState =
         if not (isLeaking (concat flowLevel)) && reachedEnd (concat flowLevel)
         then Won (drawFlowScreen flowLevel (t + dt) toCheck)
         else Lost (drawFlowScreen flowLevel (t + dt) toCheck)
 
+      -- | Executing next wave 
       wave = waveAlgorithm flowLevel toCheck []
 
-      isEnd = flowLevel == fst wave
-
+      -- | Check if any pipe is leaking
       isLeaking [] = False
       isLeaking (c : rest) =
         case c of
           FilledCell _ True -> True
           _ -> isLeaking rest
 
+      -- | Check if player has reached the DestinationPipe
       reachedEnd [] = False
       reachedEnd (c : rest) =
         case c of
@@ -66,7 +71,7 @@ handleFlows (Flows flowLevel t toCheck) (KeyPress "Up") =
 
 handleFlows state _ = state
 
--- | Try update an element at a given position in a list.
+-- | Try to update an element at a given position in a list.   
 updateListAt :: Int -> (a -> a) -> [a] -> [a]
 updateListAt index changeTo list = leftPart ++ newA ++ rightPart
     where
@@ -74,6 +79,7 @@ updateListAt index changeTo list = leftPart ++ newA ++ rightPart
         newA = if index < 0 then [] else map changeTo (take 1 leftTail)
         rightPart = if index < 0 then leftTail else drop 1 leftTail
 
+-- | Get element of the list by index
 getListElemAt :: Int -> [a] -> Maybe a
 getListElemAt _ [] = Nothing
 getListElemAt 0 (a : _rest) = Just a
@@ -81,16 +87,22 @@ getListElemAt index (_a : rest)
   = if index < 0 then Nothing else getListElemAt (index - 1) rest
 
 
-waveAlgorithm :: FlowLevel -> [(Int, Int)] -> [(Int, Int)] -> (FlowLevel, [(Int, Int)])
+waveAlgorithm 
+  :: FlowLevel                    -- Level
+  -> [(Int, Int)]                 -- Indeces of nodes to check in the current iteration 
+  -> [(Int, Int)]                 -- Accumulator of checked nodes
+  -> (FlowLevel, [(Int, Int)])    -- Return updated level and the list of indeces of nodes to check on the next iteration 
 waveAlgorithm flowLevel [] acc = (flowLevel, acc)
 waveAlgorithm flowLevel ((rowIndex, colIndex) : rest) acc = waveAlgorithm updFlowLevel rest updAcc
   where
+    -- Marking current node (pipe) as visited (filled)
     updFlowLevel = updateListAt rowIndex changeRow flowLevel
     changeRow = updateListAt colIndex changeCol
     changeCol c = case c of
                     FilledCell c' leaking -> FilledCell c' leaking
                     EmptyCell c' -> FilledCell c' (isLeaking c')
 
+    -- Check if the current node (pipe) is leaking
     isLeaking c' = isLeakingUp c' || isLeakingRight c' || isLeakingLeft c' || isLeakingDown c'
 
     isLeakingUp (Just (ConnectivePipe True _ _ _)) = (rowIndex - 1, colIndex) `notElem` updAcc && not (isFilled (rowIndex - 1, colIndex)) -- && null (getIfConnected Above)
@@ -109,40 +121,40 @@ waveAlgorithm flowLevel ((rowIndex, colIndex) : rest) acc = waveAlgorithm updFlo
                         Just (Just (FilledCell _ _)) -> True
                         _ -> False
 
+    -- Updating the list of nodes to check in the next iteration
     updAcc = Data.List.nub (acc ++ addNeigborsToCheck)
 
+    -- Get neighbor-pipes that are not Filled yet
     addNeigborsToCheck =
-      getNotFilledCell Above ++
-      getNotFilledCell ToRight ++
-      getNotFilledCell Below ++
-      getNotFilledCell ToLeft
+      getNeighborIfEmptyAndConnected Above ++
+      getNeighborIfEmptyAndConnected ToRight ++
+      getNeighborIfEmptyAndConnected Below ++
+      getNeighborIfEmptyAndConnected ToLeft
 
-    getNotFilledCell :: RelativePosition -> [(Int, Int)]
-    getNotFilledCell Above
+    -- Get neigbor cell if it's empty and connected to current one
+    getNeighborIfEmptyAndConnected :: RelativePosition -> [(Int, Int)]
+    getNeighborIfEmptyAndConnected Above
       = case fmap (getListElemAt colIndex) (getListElemAt (rowIndex - 1) flowLevel) of
-          Just (Just (EmptyCell (Just ConnectivePipe {}))) -> getIfConnected Above
+          Just (Just (EmptyCell (Just ConnectivePipe {}))) -> getNeighborIfConnected Above
           _ -> []
-    getNotFilledCell Below
+    getNeighborIfEmptyAndConnected Below
       = case fmap (getListElemAt colIndex) (getListElemAt (rowIndex + 1) flowLevel) of
-          Just (Just (EmptyCell (Just ConnectivePipe {}))) -> getIfConnected Below
+          Just (Just (EmptyCell (Just ConnectivePipe {}))) -> getNeighborIfConnected Below
           _ -> []
-    getNotFilledCell ToRight
+    getNeighborIfEmptyAndConnected ToRight
       = case fmap (getListElemAt (colIndex + 1)) (getListElemAt rowIndex flowLevel) of
-          Just (Just (EmptyCell (Just ConnectivePipe {}))) -> getIfConnected ToRight
-          Just (Just (EmptyCell (Just DestinationPipe))) -> getIfConnected ToRight
+          Just (Just (EmptyCell (Just ConnectivePipe {}))) -> getNeighborIfConnected ToRight
+          Just (Just (EmptyCell (Just DestinationPipe))) -> getNeighborIfConnected ToRight
           _ -> []
-
-    getNotFilledCell ToLeft
+    getNeighborIfEmptyAndConnected ToLeft
       = case fmap (getListElemAt (colIndex - 1)) (getListElemAt rowIndex flowLevel) of
-          Just (Just (EmptyCell (Just ConnectivePipe {}))) -> getIfConnected ToLeft
+          Just (Just (EmptyCell (Just ConnectivePipe {}))) -> getNeighborIfConnected ToLeft
           _ -> []
 
-
-    getIfConnected :: RelativePosition -> [(Int, Int)]
-    getIfConnected relPos = if checkIfConnected then [calcPosition] else []
+    -- Get neighbor cell if it's connected to current one
+    getNeighborIfConnected :: RelativePosition -> [(Int, Int)]
+    getNeighborIfConnected relPos = if arePipesConnected pipe1 pipe2 relPos then [calcPosition] else []
       where
-        checkIfConnected = arePipesConnected pipe1 pipe2 relPos
-
         pipe1 = case fmap (getListElemAt colIndex) (getListElemAt rowIndex flowLevel) of
                   Just (Just (EmptyCell (Just p))) -> p
                   Just (Just (FilledCell (Just p) _)) -> p
@@ -242,7 +254,7 @@ drawPipe (ConnectivePipe False True False True) -- "┏"
   = rotated pi (drawPipe (ConnectivePipe True False True False))
 drawPipe (ConnectivePipe True True False False) -- "┗"
   = rotated (-pi/2) (drawPipe (ConnectivePipe True False True False))
-drawPipe (ConnectivePipe True True True False) -- "┻"
+drawPipe (ConnectivePipe True True True False)  -- "┻"
   = solidPolygon [(-0.5, -0.1), (0.5, -0.1), (0.5, 0.1),
                   (0.1, 0.1), (0.1, 0.5), (-0.1, 0.5),
                   (-0.1, 0.1), (-0.5, 0.1)]
