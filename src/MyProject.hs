@@ -10,7 +10,7 @@ import qualified Data.List.Split as Split
 import qualified Data.List
 
 run :: IO ()
-run = activityOf (Flows (levelToFlowLevel level1) 1000.0 [(0, 0)]) handleGame drawGame
+run = activityOf (Flows (levelToFlowLevel level1) 5.0 [(0, 0)]) handleGame drawGame
 -- run = drawingOf (drawCellAt 1 1 (Just (ConnectivePipe True True True True)))
 handleGame :: Event -> GameState -> GameState
 handleGame event gameState =
@@ -33,6 +33,40 @@ handleLevel (InGame lvl) event = _
 
 -- | Handle waterflow after played roated the valve
 handleFlows :: GameState -> Event -> GameState
+-- handleFlows (Flows flowLevel t toCheck) (TimePassing dt) = 
+--   if round(t + dt) - floor t >= 1 then updatedState else Flows flowLevel (t + dt) toCheck
+--   where
+--     updatedState =
+--       if not isEnd then  Flows (fst wave) (t + dt) (snd wave) 
+--       else finalState
+
+--     -- | Check if new and old FlowLevels are equal
+--     isEnd = flowLevel == fst wave
+
+--     -- | Has player won or lost
+--     finalState =
+--       if not (isLeaking (concat flowLevel)) && reachedEnd (concat flowLevel)
+--       then Won (drawFlowScreen flowLevel)
+--       else Lost (drawFlowScreen flowLevel)
+
+--     -- | Executing next wave 
+--     wave = waveAlgorithm flowLevel toCheck []
+
+--     -- | Check if any pipe is leaking
+--     isLeaking [] = False
+--     isLeaking (c : rest) =
+--       case c of
+--         FilledCell _ True -> True
+--         _ -> isLeaking rest
+
+--     -- | Check if player has reached the DestinationPipe
+--     reachedEnd [] = False
+--     reachedEnd (c : rest) =
+--       case c of
+--         FilledCell (Just DestinationPipe) _ -> True
+--         _ -> reachedEnd rest
+
+
 handleFlows (Flows flowLevel t toCheck) (KeyPress "Up") =
   updatedState
     where
@@ -105,21 +139,17 @@ waveAlgorithm flowLevel ((rowIndex, colIndex) : rest) acc = waveAlgorithm updFlo
     -- Check if the current node (pipe) is leaking
     isLeaking c' = isLeakingUp c' || isLeakingRight c' || isLeakingLeft c' || isLeakingDown c'
 
-    isLeakingUp (Just (ConnectivePipe True _ _ _)) = (rowIndex - 1, colIndex) `notElem` updAcc && not (isFilled (rowIndex - 1, colIndex)) -- && null (getIfConnected Above)
+    isLeakingUp (Just (ConnectivePipe True _ _ _)) = null (getNeighborIfConnected Above) 
     isLeakingUp _ = False
 
-    isLeakingRight (Just (ConnectivePipe _ True _ _)) = (rowIndex, colIndex + 1) `notElem` updAcc && not (isFilled (rowIndex, colIndex + 1)) -- && null (getIfConnected ToRight)
+    isLeakingRight (Just (ConnectivePipe _ True _ _)) = null (getNeighborIfConnected ToRight) 
     isLeakingRight _ = False
 
-    isLeakingLeft (Just (ConnectivePipe _ _ True _)) = (rowIndex, colIndex - 1) `notElem` updAcc && not (isFilled (rowIndex, colIndex - 1)) -- && null (getIfConnected ToLeft)
+    isLeakingLeft (Just (ConnectivePipe _ _ True _)) = null (getNeighborIfConnected ToLeft)
     isLeakingLeft _ = False
 
-    isLeakingDown (Just (ConnectivePipe _ _ _ True)) = (rowIndex + 1, colIndex) `notElem` updAcc && not (isFilled (rowIndex + 1, colIndex)) -- && null (getIfConnected Below)
+    isLeakingDown (Just (ConnectivePipe _ _ _ True)) = null (getNeighborIfConnected Below) 
     isLeakingDown _ = False
-
-    isFilled (y, x) = case fmap (getListElemAt x) (getListElemAt y flowLevel) of
-                        Just (Just (FilledCell _ _)) -> True
-                        _ -> False
 
     -- Updating the list of nodes to check in the next iteration
     updAcc = Data.List.nub (acc ++ addNeigborsToCheck)
@@ -184,8 +214,11 @@ arePipesConnected (ConnectivePipe _ True _ _) (ConnectivePipe _ _ True _) ToRigh
 arePipesConnected (ConnectivePipe _ _ True _) (ConnectivePipe _ True _ _) ToLeft = True
 arePipesConnected (ConnectivePipe _ _ _ True) (ConnectivePipe True _ _ _) Below = True
 
+arePipesConnected SourcePipe (ConnectivePipe _ _ True _) ToRight = True 
+arePipesConnected (ConnectivePipe _ _ True _) SourcePipe ToLeft = True
+
 arePipesConnected (ConnectivePipe _ True _ _) DestinationPipe ToRight = True
-arePipesConnected SourcePipe (ConnectivePipe _ _ True _) ToRight = True
+arePipesConnected DestinationPipe (ConnectivePipe _ True _ _) ToLeft = True
 
 arePipesConnected _ _ _ = False
 
