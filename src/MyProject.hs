@@ -49,8 +49,8 @@ handleFlows (Flows flowLevel t toCheck) (KeyPress "Up") =
       -- | Has player won or lost
       finalState =
         if not (isLeaking (concat flowLevel)) && reachedEnd (concat flowLevel)
-        then Won (drawFlowScreen flowLevel (t + dt) toCheck)
-        else Lost (drawFlowScreen flowLevel (t + dt) toCheck)
+        then Won (drawFlowScreen flowLevel)
+        else Lost (drawFlowScreen flowLevel)
 
       -- | Executing next wave 
       wave = waveAlgorithm flowLevel toCheck []
@@ -201,7 +201,7 @@ drawGame gameState =
     Won pic -> drawWonScreen
     Lost pic -> drawLostScreen
     InGame lvl -> drawLevel lvl
-    Flows flowLevel t toCheck -> drawFlowScreen flowLevel t toCheck
+    Flows flowLevel _ _ -> drawFlowScreen flowLevel
 
 drawMenu :: Picture
 drawMenu = _
@@ -212,8 +212,8 @@ drawWonScreen = colored blue (circle 1)
 drawLostScreen :: Picture
 drawLostScreen = colored red (circle 1)
 
-drawFlowScreen :: FlowLevel -> Double -> [(Int, Int)] -> Picture
-drawFlowScreen flowLevel _ _ = pictures listOfPictures
+drawFlowScreen :: FlowLevel -> Picture
+drawFlowScreen flowLevel = pictures listOfPictures
   where
     listOfPictures
       = map (\(rowIndex, colIndex, fc)
