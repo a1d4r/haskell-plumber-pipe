@@ -32,6 +32,8 @@ dependencies:
 - base >= 4.7 && < 5
 - codeworld-api
 - text
+- split
+- random
 
 library:
   source-dirs: src

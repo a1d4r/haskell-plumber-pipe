@@ -1,21 +1,32 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE UnicodeSyntax #-}
 {-# OPTIONS_GHC -Wall #-}
 {-# OPTIONS_GHC -fdefer-typed-holes -fshow-hole-constraints -funclutter-valid-hole-fits #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
+
+{-# OPTIONS_GHC -Wno-typed-holes #-}
 module MyProject where
 
 import CodeWorld
-import qualified Data.Text as Text
 import qualified Data.List.Split as Split
+import qualified System.Random as Random
 import qualified Data.List
+import qualified Data.Text as Text
+
 
 run :: IO ()
-run = activityOf (Flows (levelToFlowLevel level1) 1 1 [(0, 0)]) handleGame drawGame
+run = do
+  g <- randomizeLevel level1
+  print ""
+  -- activityOf StartMenu handleGame drawGame
+
+  activityOf (Flows (levelToFlowLevel level1) 1 1 [(0, 0)]) handleGame drawGame
 -- run = drawingOf (drawCellAt 1 1 (Just (ConnectivePipe True True True True)))
+
 handleGame :: Event -> GameState -> GameState
 handleGame event gameState =
   case gameState of
     StartMenu -> handleMenu event
+
     Won pic   -> handleEndScreen gameState event
     Lost pic  -> handleEndScreen gameState event
     InGame lvl -> handleLevel (InGame lvl) event
@@ -189,7 +200,6 @@ arePipesConnected _ _ _ = False
 data RelativePosition = Above | Below | ToLeft | ToRight
 
 
-
 drawGame :: GameState -> Picture
 drawGame gameState =
   case gameState of
@@ -287,17 +297,18 @@ data GameState
   | Flows FlowLevel Int Double [(Int, Int)] -- ^ Player opened a valve
 
 -- | Pipe that connects sides specified by True
--- | sides are specified in order Up, Right, Down, Left
+
+-- | sides are specified in order Up, Right, Left, Down
 data Pipe
-  = ConnectivePipe   -- ^ Pipes connecting several sides
-  {                  -- ^ open sides are marked as True
+  = ConnectivePipe   -- ^ Pipes connecting several sides, open sides are marked as True
+  {
     up :: Bool,
     right :: Bool,
-    left :: Bool,
-    down :: Bool
+    down :: Bool,
+    left :: Bool
   }
-  | SourcePipe
-  | DestinationPipe
+  | SourcePipe       -- ^ Horizontal source pipe (water flows from left to right)
+  | DestinationPipe  -- ^ Horizontal destination pipe (water flows from left to right)
   deriving (Show, Eq)
 
 -- | A cell is either empty or has pipe in it
@@ -359,9 +370,33 @@ reprOfLevel1 =
   , ". ┗ ┛ . ┗ ━ ━ ━ ━ ╾"
   ]
 
+level1 :: Level
+level1 = stringsToLevel reprOfLevel1
 
 levelToFlowLevel :: Level -> FlowLevel
 levelToFlowLevel = map (map EmptyCell)
 
-level1 :: Level
-level1 = stringsToLevel reprOfLevel1
+-- | Rotate a pipe by 90 degrees in clockwise direction specified number of times
+rotatePipeClockwise :: Int -> Pipe -> Pipe
+rotatePipeClockwise n p
+  | n <= 0 = p
+  | otherwise =
+    case p of
+      (ConnectivePipe u r d l) -> rotatePipeClockwise (n - 1) (ConnectivePipe l u r d)
+      _ -> p
+
+-- | Rotate a pipe randomly
+rotatePipeRandomly :: Pipe -> IO Pipe
+rotatePipeRandomly p = do
+  n <- Random.randomRIO (0, 3)
+  return (rotatePipeClockwise n p)
+
+-- | Randomly rotate all the pipes in the level
+randomizeLevel :: Level -> IO Level
+randomizeLevel = mapM (mapM randomizeCell)
+  where
+    randomizeCell :: Cell -> IO Cell
+    randomizeCell cell =
+      case cell of
+        Just pipe -> fmap Just (rotatePipeRandomly pipe)
+        Nothing   -> return cell
