@@ -4,7 +4,7 @@
 {-# OPTIONS_GHC -fdefer-typed-holes -fshow-hole-constraints -funclutter-valid-hole-fits #-}
 
 {-# OPTIONS_GHC -Wno-typed-holes #-}
-module MyProject where
+-- module MyProject where
 
 
 
@@ -15,8 +15,8 @@ import qualified Data.List
 import qualified Data.Text as Text
 import qualified Data.Maybe
 
--- main :: IO()
--- main = run
+main :: IO()
+main = run
 
 run :: IO ()
 run = do
@@ -445,6 +445,25 @@ reprOfLevel2 =
 
 level2 :: Level
 level2 = stringsToLevel reprOfLevel2
+
+reprOfLevel3 :: [String]
+reprOfLevel3 =
+  [ "╼ ┳ ┳ ┓ ┏ ┓ ┏ ┳ ┳ ┓"
+  , "┏ ┻ ┫ ┣ ┛ ┣ ┫ ┣ ┫ ┃"
+  , "┣ ┳ ┫ ┗ ┳ ┻ ╋ ┫ ┣ ┫"
+  , "┗ ┫ ┣ ┳ ┫ ┏ ┻ ┫ ┣ ┛"
+  , "┏ ┛ ┣ ┻ ╋ ┫ ┏ ╋ ┻ ┓"
+  , "┗ ┳ ╋ ┳ ┛ ┣ ┛ ┗ ┳ ┫"
+  , "┏ ┻ ┻ ┫ ┏ ┻ ┓ ┏ ┻ ┫"
+  , "┣ ┓ ┏ ┫ ┗ ┳ ╋ ┛ ┏ ┫"
+  , "┣ ┻ ┫ ┣ ┳ ┫ ┣ ┓ ┣ ┛"
+  , "┗ ━ ┻ ┻ ┛ ┗ ┛ ┗ ┻ ╾"
+  ]
+
+level3 :: Level
+level3 = stringsToLevel reprOfLevel3
+
+
 
 levelToFlowLevel :: Level -> FlowLevel
 levelToFlowLevel = map (map EmptyCell)
