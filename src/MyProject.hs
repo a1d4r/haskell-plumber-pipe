@@ -4,7 +4,7 @@
 {-# OPTIONS_GHC -fdefer-typed-holes -fshow-hole-constraints -funclutter-valid-hole-fits #-}
 
 {-# OPTIONS_GHC -Wno-typed-holes #-}
--- module MyProject where
+module MyProject where
 
 
 
@@ -15,29 +15,26 @@ import qualified Data.List
 import qualified Data.Text as Text
 import qualified Data.Maybe
 
-main :: IO()
-main = run
+--main :: IO()
+--main = run
 
 run :: IO ()
 run = do
   randomLevel1 <- randomizeLevel level1
   randomLevel2 <- randomizeLevel level2
   randomLevel3 <- randomizeLevel level3
-  
-  print ""
-  -- activityOf StartMenu handleGame drawGame
+
   activityOf (StartMenu [randomLevel1, randomLevel2, randomLevel3]) handleGame drawGame
-  -- activityOf (Flows (levelToFlowLevel level1) 1 1 [(0, 0)]) handleGame drawGame
-  -- run = drawingOf (drawCellAt 1 1 (Just (ConnectivePipe True True True True)))
+
 
 handleGame :: Event -> GameState -> GameState
 handleGame event gameState =
   case gameState of
     StartMenu _  -> handleMenu gameState event
-    Won pic _  -> handleEndScreen gameState event
-    Lost pic _ -> handleEndScreen gameState event
-    InGame lvl _ -> handleLevel gameState event
-    Flows flowLvl secPassed t toCheck _-> handleFlows gameState event
+    Won _ _  -> handleEndScreen gameState event
+    Lost _ _ -> handleEndScreen gameState event
+    InGame _ _ -> handleLevel gameState event
+    Flows _ _ _ _ _-> handleFlows gameState event
 
 
 handleMenu :: GameState -> Event -> GameState
@@ -45,19 +42,17 @@ handleMenu (StartMenu levels@(lvl1 : lvl2 : lvl3 : xs)) (PointerPress (x, y))
   
   = newState          -- (Flows (levelToFlowLevel level1) 1 1 [(0, 0)]) 
   where 
-    x' = x
-    y' = y
     newState 
-      | y' >= -4 && y'<=(-2) && (abs x) <= 4 = InGame lvl3 levels 
-      | y' >= -1 && y'<=1 && (abs x) <= 4 = InGame lvl2 levels
-      | y' >= 2 && y'<=4 && (abs x) <= 4 = InGame lvl1 levels
+      | y >= -4 && y<=(-2) && (abs x) <= 4 = InGame lvl3 levels 
+      | y >= -1 && y<=1 && (abs x) <= 4 = InGame lvl2 levels
+      | y >= 2 && y<=4 && (abs x) <= 4 = InGame lvl1 levels
       | otherwise = StartMenu (lvl1 : lvl2 : lvl3 : xs)
     
 handleMenu state _ = state
 
 handleEndScreen :: GameState -> Event -> GameState
-handleEndScreen (Won pic levels) (PointerPress mouse) = StartMenu levels
-handleEndScreen (Lost pic levels) (PointerPress mouse) = StartMenu levels
+handleEndScreen (Won _ levels) (PointerPress _) = StartMenu levels
+handleEndScreen (Lost _ levels) (PointerPress _) = StartMenu levels
 handleEndScreen state _ = state
 
 
@@ -76,7 +71,7 @@ handleLevel (InGame lvl levels) (PointerPress (x, y)) = newGameState
       Nothing -> cell
       Just pipe -> Just (rotatePipeClockwise 1 pipe)
 
-handleLevel (InGame lvl levels) _ = (InGame lvl levels)
+handleLevel state _ = state
 
 
 updateAt :: Int -> (a -> a) -> [a] -> [a]
@@ -255,8 +250,8 @@ drawGame :: GameState -> Picture
 drawGame gameState =
   case gameState of
     StartMenu  _ -> drawMenu
-    Won pic _ -> drawWonScreen
-    Lost pic _ -> drawLostScreen
+    Won lvl _ -> drawWonScreen lvl
+    Lost lvl _ -> drawLostScreen lvl
     InGame lvl _ -> drawLevel lvl
     Flows flowLevel _ _ _ _ -> drawFlowScreen flowLevel
 
@@ -268,13 +263,13 @@ drawMenu =  translated 0 shiftY menu
     
     menu = positioned1 <> positioned2 <> positioned3 
     
-    positioned1 = translated 0 0 level1  
-    positioned2 = translated 0 (-dy) level2
-    positioned3 = translated 0 (2 * (-dy)) level3
+    positioned1 = translated 0 0 level_1  
+    positioned2 = translated 0 (-dy) level_2
+    positioned3 = translated 0 (2 * (-dy)) level_3
     
-    level1 = (lettering "Level 1 (Easy)") <> border1
-    level2 = (lettering "Level 2 (Normal)") <> border2
-    level3 = (lettering "Level 3 (Hard)") <> border3
+    level_1 = (lettering "Level 1 (Easy)") <> border1
+    level_2 = (lettering "Level 2 (Normal)") <> border2
+    level_3 = (lettering "Level 3 (Hard)") <> border3
     
     border1 = colored (lighter 0.4 blue) $ solidRectangle 8 2
     border2 = colored (lighter 0.4 blue) $ solidRectangle 8 2
@@ -282,20 +277,22 @@ drawMenu =  translated 0 shiftY menu
     
     
 
-drawWonScreen :: Picture
-drawWonScreen = translated 0 shiftY window
+drawWonScreen :: Picture -> Picture
+drawWonScreen lvl = translated 0 shiftY window <> border <> lvl
   where
     dy = 2
     shiftY = 1
+    border = translated (-0.5) 0 $ colored (lighter 0.4 blue) $ solidRectangle 16 6
     line1 = translated 0 0 $ lettering "You won!"
     line2 = translated 0 (-dy) $ lettering "Click anywhere to continue."
     window = line1 <> line2 <> blank
 
-drawLostScreen :: Picture
-drawLostScreen = translated 0 shiftY window
+drawLostScreen :: Picture -> Picture
+drawLostScreen lvl = translated 0 shiftY window <> border <> lvl
     where
     dy = 2
     shiftY = 1
+    border = translated (-0.5) 0 $ colored (lighter 0.4 blue) $ solidRectangle 16 6
     line1 = translated 0 0 $ lettering "You lost!"
     line2 = translated 0 (-dy) $ lettering "Click anywhere to continue."
     window = line1 <> line2 <> blank
