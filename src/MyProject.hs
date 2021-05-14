@@ -2,10 +2,8 @@
 {-# LANGUAGE UnicodeSyntax #-}
 {-# OPTIONS_GHC -Wall #-}
 {-# OPTIONS_GHC -fdefer-typed-holes -fshow-hole-constraints -funclutter-valid-hole-fits #-}
-
 {-# OPTIONS_GHC -Wno-typed-holes #-}
--- module MyProject where
-
+module MyProject where
 
 
 import CodeWorld
@@ -14,9 +12,6 @@ import qualified System.Random as Random
 import qualified Data.List
 import qualified Data.Text as Text
 import qualified Data.Maybe
-
-main :: IO()
-main = run
 
 run :: IO ()
 run = do
