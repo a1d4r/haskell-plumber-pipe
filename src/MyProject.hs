@@ -429,6 +429,23 @@ reprOfLevel1 =
 level1 :: Level
 level1 = stringsToLevel reprOfLevel1
 
+reprOfLevel2 :: [String]
+reprOfLevel2 =
+  [ "╼ ━ ┓ . . ┏ ━ ━ ━ ┓"
+  , ". . ┗ ━ ┳ ┛ . . . ┃"
+  , ". . ┏ ━ ┛ . . . ┏ ┛"
+  , ". ┏ ┛ ┏ ┓ ┏ ┓ . ┃ ."
+  , ". ┗ ┳ ┫ ┗ ┫ ┗ ┳ ┛ ."
+  , "┏ ━ ┛ ┃ . ┗ ┓ ┃ . ."
+  , "┃ . ┏ ┻ ━ ┓ ┗ ╋ ━ ┓"
+  , "┗ ━ ┫ . . ┗ ━ ┛ . ┃"
+  , ". . ┃ . . ┏ ┓ . ┏ ┛"
+  , ". . ┗ ━ ━ ┛ ┗ ━ ┻ ╾"
+  ]
+
+level2 :: Level
+level2 = stringsToLevel reprOfLevel2
+
 levelToFlowLevel :: Level -> FlowLevel
 levelToFlowLevel = map (map EmptyCell)
 
