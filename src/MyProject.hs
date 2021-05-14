@@ -4,7 +4,9 @@
 {-# OPTIONS_GHC -fdefer-typed-holes -fshow-hole-constraints -funclutter-valid-hole-fits #-}
 
 {-# OPTIONS_GHC -Wno-typed-holes #-}
-module MyProject where
+ module MyProject where
+
+
 
 import CodeWorld
 import qualified Data.List.Split as Split
@@ -12,20 +14,22 @@ import qualified System.Random as Random
 import qualified Data.List
 import qualified Data.Text as Text
 
+--main :: IO()
+--main = run
 
 run :: IO ()
 run = do
   g <- randomizeLevel level1
   print ""
   -- activityOf StartMenu handleGame drawGame
-
-  activityOf (Flows (levelToFlowLevel level1) 1 1 [(0, 0)]) handleGame drawGame
+  activityOf (StartMenu) handleGame drawGame
+  -- activityOf (Flows (levelToFlowLevel level1) 1 1 [(0, 0)]) handleGame drawGame
 -- run = drawingOf (drawCellAt 1 1 (Just (ConnectivePipe True True True True)))
 
 handleGame :: Event -> GameState -> GameState
 handleGame event gameState =
   case gameState of
-    StartMenu -> handleMenu event
+    StartMenu -> handleMenu gameState event
 
     Won pic   -> handleEndScreen gameState event
     Lost pic  -> handleEndScreen gameState event
@@ -33,11 +37,14 @@ handleGame event gameState =
     Flows flowLvl secPassed t toCheck -> handleFlows (Flows flowLvl secPassed t toCheck) event
 
 
-handleMenu :: Event -> GameState
-handleMenu = _
+handleMenu :: GameState -> Event -> GameState
+handleMenu state (PointerPress mouse) = (Flows (levelToFlowLevel level1) 1 1 [(0, 0)])
+handleMenu state _ = state
 
 handleEndScreen :: GameState -> Event -> GameState
-handleEndScreen state _= state
+handleEndScreen state (PointerPress mouse) = StartMenu
+handleEndScreen state _ = state
+
 
 handleLevel :: GameState -> Event -> GameState
 handleLevel (InGame lvl) event = _
@@ -210,17 +217,37 @@ drawGame gameState =
     Flows flowLevel _ _ _ -> drawFlowScreen flowLevel
 
 drawMenu :: Picture
-drawMenu = _
+drawMenu = (lettering "O") <> (lettering "K") <> translated 0 shiftY menu
+  where 
+    dy = 2
+    shiftY = 2
+    level1 = translated 0 0 $ lettering "Level 1 (Easy)"
+    level2 = translated 0 (-dy) $ lettering "Level 2 (Normal)"
+    level3 = translated 0 (2 * (-dy))$ lettering "Level 3 (Hard)"
+    menu = level1 <> level2 <> level3 <> blank
 
 drawWonScreen :: Picture
-drawWonScreen = colored blue (circle 1)
+drawWonScreen = translated 0 shiftY window
+  where
+    dy = 2
+    shiftY = 1
+    line1 = translated 0 0 $ lettering "You won!"
+    line2 = translated 0 (-dy) $ lettering "Click anywhere to continue."
+    window = line1 <> line2 <> blank
 
 drawLostScreen :: Picture
-drawLostScreen = colored red (circle 1)
+drawLostScreen = translated 0 shiftY window
+    where
+    dy = 2
+    shiftY = 1
+    line1 = translated 0 0 $ lettering "You won!"
+    line2 = translated 0 (-dy) $ lettering "Click anywhere to continue."
+    window = line1 <> line2 <> blank
 
 drawFlowScreen :: FlowLevel -> Picture
-drawFlowScreen flowLevel = pictures listOfPictures
+drawFlowScreen flowLevel = translated (-size) (size) (pictures listOfPictures)
   where
+    size = fromIntegral $ (length flowLevel)`div` 2
     listOfPictures
       = map (\(rowIndex, colIndex, fc)
              -> case fc of
@@ -238,8 +265,9 @@ levelWithIndeces = zipWith (\ rowIndex row
 
 -- | Draw current state of the game
 drawLevel :: Level -> Picture
-drawLevel level = pictures listOfPicture
+drawLevel level = translated (-size) (size) (pictures listOfPicture)
   where
+    size = fromIntegral $ (length level)`div` 2
     listOfPicture = map(\(rowIndex, colIndex, cell)
                         -> drawCellAt colIndex (-rowIndex) cell)
                        (concat (levelWithIndeces level))
