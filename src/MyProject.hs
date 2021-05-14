@@ -4,7 +4,7 @@
 {-# OPTIONS_GHC -fdefer-typed-holes -fshow-hole-constraints -funclutter-valid-hole-fits #-}
 
 {-# OPTIONS_GHC -Wno-typed-holes #-}
-module MyProject where
+-- module MyProject where
 
 
 
@@ -15,8 +15,8 @@ import qualified Data.List
 import qualified Data.Text as Text
 import qualified Data.Maybe
 
---main :: IO()
---main = run
+main :: IO()
+main = run
 
 run :: IO ()
 run = do
@@ -27,6 +27,7 @@ run = do
   activityOf (StartMenu [randomLevel1, randomLevel2, randomLevel3]) handleGame drawGame
 
 
+-- handle all states of the game
 handleGame :: Event -> GameState -> GameState
 handleGame event gameState =
   case gameState of
@@ -37,6 +38,8 @@ handleGame event gameState =
     Flows _ _ _ _ _-> handleFlows gameState event
 
 
+
+--handle the main menu
 handleMenu :: GameState -> Event -> GameState
 handleMenu (StartMenu levels@(lvl1 : lvl2 : lvl3 : xs)) (PointerPress (x, y)) 
   
@@ -56,8 +59,8 @@ handleEndScreen (Lost _ levels) (PointerPress _) = StartMenu levels
 handleEndScreen state _ = state
 
 
+-- handle InGame State of the game
 handleLevel :: GameState -> Event -> GameState
-
 handleLevel (InGame lvl levels) (PointerPress (x, y)) = newGameState
   where 
     x' = (round (-y)) + size + 1
@@ -74,6 +77,7 @@ handleLevel (InGame lvl levels) (PointerPress (x, y)) = newGameState
 handleLevel state _ = state
 
 
+-- updates only one element under index "ind" using function "f"
 updateAt :: Int -> (a -> a) -> [a] -> [a]
 updateAt ind f list = if ind > 0 then newList else list
   where
@@ -139,6 +143,7 @@ getListElemAt _ [] = Nothing
 getListElemAt 0 (a : _rest) = Just a
 getListElemAt index (_a : rest)
   = if index < 0 then Nothing else getListElemAt (index - 1) rest
+
 
 
 waveAlgorithm 
@@ -246,6 +251,7 @@ arePipesConnected _ _ _ = False
 data RelativePosition = Above | Below | ToLeft | ToRight
 
 
+-- draw any state of the game
 drawGame :: GameState -> Picture
 drawGame gameState =
   case gameState of
@@ -255,6 +261,10 @@ drawGame gameState =
     InGame lvl _ -> drawLevel lvl
     Flows flowLevel _ _ _ _ -> drawFlowScreen flowLevel
 
+
+
+
+-- draw the main menu
 drawMenu :: Picture
 drawMenu =  translated 0 shiftY menu
   where 
@@ -276,7 +286,7 @@ drawMenu =  translated 0 shiftY menu
     border3 = colored (lighter 0.4 blue) $ solidRectangle 8 2
     
     
-
+-- draw the screen when won
 drawWonScreen :: Picture -> Picture
 drawWonScreen lvl = translated 0 shiftY window <> border <> lvl
   where
@@ -287,6 +297,8 @@ drawWonScreen lvl = translated 0 shiftY window <> border <> lvl
     line2 = translated 0 (-dy) $ lettering "Click anywhere to continue."
     window = line1 <> line2 <> blank
 
+
+-- draw the screen when lost
 drawLostScreen :: Picture -> Picture
 drawLostScreen lvl = translated 0 shiftY window <> border <> lvl
     where
@@ -297,6 +309,8 @@ drawLostScreen lvl = translated 0 shiftY window <> border <> lvl
     line2 = translated 0 (-dy) $ lettering "Click anywhere to continue."
     window = line1 <> line2 <> blank
 
+
+-- draw the scene of waterflow
 drawFlowScreen :: FlowLevel -> Picture
 drawFlowScreen flowLevel = translated (-size) (size) (pictures listOfPictures)
   where
@@ -371,7 +385,7 @@ drawCellAt i j cell = translated x y
       --   Just p  -> drawPipe p
 
 data GameState
-  = StartMenu [Level]   -- ^ Start menu
+  = StartMenu [Level]                    -- ^ Start menu
   | Won Picture [Level]                  -- ^ Player won (connected pipes correctly)
   | Lost Picture [Level]                 -- ^ Player lost (water leakage)
   | InGame Level [Level]                 -- ^ Player is in game, Level is the level he plays
@@ -435,7 +449,7 @@ stringsToLevel = map (map strToCell . Split.splitOn " ")
         _ -> Nothing
 
 
--- | Symbol representation for level
+-- | Symbol representation for level1
 -- | Character set for pipes: https://unicode-table.com/en/blocks/box-drawing/
 reprOfLevel1 :: [String]
 reprOfLevel1 =
@@ -454,6 +468,8 @@ reprOfLevel1 =
 level1 :: Level
 level1 = stringsToLevel reprOfLevel1
 
+
+-- | Symbol representation for level2
 reprOfLevel2 :: [String]
 reprOfLevel2 =
   [ "╼ ━ ┓ . . ┏ ━ ━ ━ ┓"
@@ -471,6 +487,7 @@ reprOfLevel2 =
 level2 :: Level
 level2 = stringsToLevel reprOfLevel2
 
+-- | Symbol representation for level3
 reprOfLevel3 :: [String]
 reprOfLevel3 =
   [ "╼ ┳ ┳ ┓ ┏ ┓ ┏ ┳ ┳ ┓"
@@ -489,7 +506,7 @@ level3 :: Level
 level3 = stringsToLevel reprOfLevel3
 
 
-
+-- make FlowLevel from Level
 levelToFlowLevel :: Level -> FlowLevel
 levelToFlowLevel = map (map EmptyCell)
 
