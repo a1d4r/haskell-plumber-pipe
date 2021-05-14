@@ -21,47 +21,62 @@ main = run
 run :: IO ()
 run = do
   randomLevel1 <- randomizeLevel level1
+  randomLevel2 <- randomizeLevel level2
+  randomLevel3 <- randomizeLevel level3
+  
   print ""
   -- activityOf StartMenu handleGame drawGame
-  activityOf (StartMenu randomLevel1 level1 level1) handleGame drawGame
+  activityOf (StartMenu [randomLevel1, randomLevel2, randomLevel3]) handleGame drawGame
   -- activityOf (Flows (levelToFlowLevel level1) 1 1 [(0, 0)]) handleGame drawGame
--- run = drawingOf (drawCellAt 1 1 (Just (ConnectivePipe True True True True)))
+  -- run = drawingOf (drawCellAt 1 1 (Just (ConnectivePipe True True True True)))
 
 handleGame :: Event -> GameState -> GameState
 handleGame event gameState =
   case gameState of
-    StartMenu _ _ _-> handleMenu gameState event
-    Won pic   -> handleEndScreen gameState event
-    Lost pic  -> handleEndScreen gameState event
-    InGame lvl -> handleLevel (InGame lvl) event
-    Flows flowLvl secPassed t toCheck -> handleFlows (Flows flowLvl secPassed t toCheck) event
+    StartMenu _  -> handleMenu gameState event
+    Won pic _  -> handleEndScreen gameState event
+    Lost pic _ -> handleEndScreen gameState event
+    InGame lvl _ -> handleLevel gameState event
+    Flows flowLvl secPassed t toCheck _-> handleFlows gameState event
 
 
 handleMenu :: GameState -> Event -> GameState
-handleMenu (StartMenu lvl1 lvl2 lvl3) (PointerPress mouse) = InGame lvl1         -- (Flows (levelToFlowLevel level1) 1 1 [(0, 0)]) 
+handleMenu (StartMenu levels@(lvl1 : lvl2 : lvl3 : xs)) (PointerPress (x, y)) 
+  
+  = newState          -- (Flows (levelToFlowLevel level1) 1 1 [(0, 0)]) 
+  where 
+    x' = x
+    y' = y
+    newState 
+      | y' >= -4 && y'<=(-2) && (abs x) <= 4 = InGame lvl3 levels 
+      | y' >= -1 && y'<=1 && (abs x) <= 4 = InGame lvl2 levels
+      | y' >= 2 && y'<=4 && (abs x) <= 4 = InGame lvl1 levels
+      | otherwise = StartMenu (lvl1 : lvl2 : lvl3 : xs)
+    
 handleMenu state _ = state
 
 handleEndScreen :: GameState -> Event -> GameState
-handleEndScreen state (PointerPress mouse) = StartMenu level1 level1 level1
+handleEndScreen (Won pic levels) (PointerPress mouse) = StartMenu levels
+handleEndScreen (Lost pic levels) (PointerPress mouse) = StartMenu levels
 handleEndScreen state _ = state
 
 
 handleLevel :: GameState -> Event -> GameState
 
-handleLevel (InGame lvl) (PointerPress (x, y)) = newGameState
+handleLevel (InGame lvl levels) (PointerPress (x, y)) = newGameState
   where 
     x' = (round (-y)) + size + 1
     y' = (round (x)) + size + 1
     size = fromIntegral $ (length lvl) `div` 2
     newGameState = case (x', y') of
-      (1, 1) -> Flows (levelToFlowLevel lvl) 1 1 [(0, 0)]
-      (i, j) -> InGame (updateAt i (updateAt j (rotateCell)) lvl) 
+      (1, 1) -> Flows (levelToFlowLevel lvl) 1 1 [(0, 0)] levels
+      (i, j) -> InGame (updateAt i (updateAt j (rotateCell)) lvl) levels 
     
     rotateCell cell = case cell of
       Nothing -> cell
       Just pipe -> Just (rotatePipeClockwise 1 pipe)
 
-handleLevel (InGame lvl) _ = (InGame lvl)
+handleLevel (InGame lvl levels) _ = (InGame lvl levels)
 
 
 updateAt :: Int -> (a -> a) -> [a] -> [a]
@@ -79,11 +94,12 @@ updateAt ind f list = if ind > 0 then newList else list
 
 -- | Handle waterflow after played roated the valve
 handleFlows :: GameState -> Event -> GameState
-handleFlows (Flows flowLevel secsPassed t toCheck) (TimePassing dt) = 
-  if t + dt - fromIntegral secsPassed >= 0.95 then updatedState else Flows flowLevel secsPassed (t + dt) toCheck
+handleFlows (Flows flowLevel secsPassed t toCheck levels) (TimePassing dt) = 
+  if t + dt - fromIntegral secsPassed >= 0.95 then updatedState 
+    else Flows flowLevel secsPassed (t + dt) toCheck levels
   where
     updatedState =
-      if not isEnd then  Flows (fst wave) (floor (t + dt)) (t + dt) (snd wave) 
+      if not isEnd then  Flows (fst wave) (floor (t + dt)) (t + dt) (snd wave) levels 
       else finalState
 
     -- | Check if new and old FlowLevels are equal
@@ -92,8 +108,8 @@ handleFlows (Flows flowLevel secsPassed t toCheck) (TimePassing dt) =
     -- | Has player won or lost
     finalState =
       if not (isLeaking (concat flowLevel)) && reachedEnd (concat flowLevel)
-      then Won (drawFlowScreen flowLevel)
-      else Lost (drawFlowScreen flowLevel)
+      then Won (drawFlowScreen flowLevel) levels
+      else Lost (drawFlowScreen flowLevel) levels
 
     -- | Executing next wave 
     wave = waveAlgorithm flowLevel toCheck []
@@ -238,21 +254,33 @@ data RelativePosition = Above | Below | ToLeft | ToRight
 drawGame :: GameState -> Picture
 drawGame gameState =
   case gameState of
-    StartMenu _ _ _ -> drawMenu
-    Won pic -> drawWonScreen
-    Lost pic -> drawLostScreen
-    InGame lvl -> drawLevel lvl
-    Flows flowLevel _ _ _ -> drawFlowScreen flowLevel
+    StartMenu  _ -> drawMenu
+    Won pic _ -> drawWonScreen
+    Lost pic _ -> drawLostScreen
+    InGame lvl _ -> drawLevel lvl
+    Flows flowLevel _ _ _ _ -> drawFlowScreen flowLevel
 
 drawMenu :: Picture
 drawMenu =  translated 0 shiftY menu
   where 
-    dy = 2
-    shiftY = 2
-    level1 = translated 0 0 $ lettering "Level 1 (Easy)"
-    level2 = translated 0 (-dy) $ lettering "Level 2 (Normal)"
-    level3 = translated 0 (2 * (-dy))$ lettering "Level 3 (Hard)"
-    menu = level1 <> level2 <> level3 <> blank
+    dy = 3
+    shiftY = 3
+    
+    menu = positioned1 <> positioned2 <> positioned3 
+    
+    positioned1 = translated 0 0 level1  
+    positioned2 = translated 0 (-dy) level2
+    positioned3 = translated 0 (2 * (-dy)) level3
+    
+    level1 = (lettering "Level 1 (Easy)") <> border1
+    level2 = (lettering "Level 2 (Normal)") <> border2
+    level3 = (lettering "Level 3 (Hard)") <> border3
+    
+    border1 = colored (lighter 0.4 blue) $ solidRectangle 8 2
+    border2 = colored (lighter 0.4 blue) $ solidRectangle 8 2
+    border3 = colored (lighter 0.4 blue) $ solidRectangle 8 2
+    
+    
 
 drawWonScreen :: Picture
 drawWonScreen = translated 0 shiftY window
@@ -346,11 +374,11 @@ drawCellAt i j cell = translated x y
       --   Just p  -> drawPipe p
 
 data GameState
-  = StartMenu Level Level Level   -- ^ Start menu
-  | Won Picture                   -- ^ Player won (connected pipes correctly)
-  | Lost Picture                  -- ^ Player lost (water leakage)
-  | InGame Level                  -- ^ Player is in game, Level is the level he plays
-  | Flows FlowLevel Int Double [(Int, Int)] -- ^ Player opened a valve
+  = StartMenu [Level]   -- ^ Start menu
+  | Won Picture [Level]                  -- ^ Player won (connected pipes correctly)
+  | Lost Picture [Level]                 -- ^ Player lost (water leakage)
+  | InGame Level [Level]                 -- ^ Player is in game, Level is the level he plays
+  | Flows FlowLevel Int Double [(Int, Int)] [Level] -- ^ Player opened a valve
 
 -- | Pipe that connects sides specified by True
 
