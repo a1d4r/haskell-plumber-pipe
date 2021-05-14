@@ -4,7 +4,7 @@
 {-# OPTIONS_GHC -fdefer-typed-holes -fshow-hole-constraints -funclutter-valid-hole-fits #-}
 
 {-# OPTIONS_GHC -Wno-typed-holes #-}
- module MyProject where
+module MyProject where
 
 
 
@@ -13,24 +13,24 @@ import qualified Data.List.Split as Split
 import qualified System.Random as Random
 import qualified Data.List
 import qualified Data.Text as Text
+import qualified Data.Maybe
 
---main :: IO()
---main = run
+-- main :: IO()
+-- main = run
 
 run :: IO ()
 run = do
-  g <- randomizeLevel level1
+  randomLevel1 <- randomizeLevel level1
   print ""
   -- activityOf StartMenu handleGame drawGame
-  activityOf (StartMenu) handleGame drawGame
+  activityOf (StartMenu randomLevel1 level1 level1) handleGame drawGame
   -- activityOf (Flows (levelToFlowLevel level1) 1 1 [(0, 0)]) handleGame drawGame
 -- run = drawingOf (drawCellAt 1 1 (Just (ConnectivePipe True True True True)))
 
 handleGame :: Event -> GameState -> GameState
 handleGame event gameState =
   case gameState of
-    StartMenu -> handleMenu gameState event
-
+    StartMenu _ _ _-> handleMenu gameState event
     Won pic   -> handleEndScreen gameState event
     Lost pic  -> handleEndScreen gameState event
     InGame lvl -> handleLevel (InGame lvl) event
@@ -38,16 +38,44 @@ handleGame event gameState =
 
 
 handleMenu :: GameState -> Event -> GameState
-handleMenu state (PointerPress mouse) = (Flows (levelToFlowLevel level1) 1 1 [(0, 0)])
+handleMenu (StartMenu lvl1 lvl2 lvl3) (PointerPress mouse) = InGame lvl1         -- (Flows (levelToFlowLevel level1) 1 1 [(0, 0)]) 
 handleMenu state _ = state
 
 handleEndScreen :: GameState -> Event -> GameState
-handleEndScreen state (PointerPress mouse) = StartMenu
+handleEndScreen state (PointerPress mouse) = StartMenu level1 level1 level1
 handleEndScreen state _ = state
 
 
 handleLevel :: GameState -> Event -> GameState
-handleLevel (InGame lvl) event = _
+
+handleLevel (InGame lvl) (PointerPress (x, y)) = newGameState
+  where 
+    x' = (round (-y)) + size + 1
+    y' = (round (x)) + size + 1
+    size = fromIntegral $ (length lvl) `div` 2
+    newGameState = case (x', y') of
+      (1, 1) -> Flows (levelToFlowLevel lvl) 1 1 [(0, 0)]
+      (i, j) -> InGame (updateAt i (updateAt j (rotateCell)) lvl) 
+    
+    rotateCell cell = case cell of
+      Nothing -> cell
+      Just pipe -> Just (rotatePipeClockwise 1 pipe)
+
+handleLevel (InGame lvl) _ = (InGame lvl)
+
+
+updateAt :: Int -> (a -> a) -> [a] -> [a]
+updateAt ind f list = if ind > 0 then newList else list
+  where
+    (begin, end) = splitAt (ind-1) list
+    newList = begin ++ newElem ++ (drop 1 end)
+    maybeElem = Data.Maybe.listToMaybe end
+    newElem = case maybeElem of
+      Nothing -> []
+      Just oldElem -> [f oldElem]
+
+
+
 
 -- | Handle waterflow after played roated the valve
 handleFlows :: GameState -> Event -> GameState
@@ -210,14 +238,14 @@ data RelativePosition = Above | Below | ToLeft | ToRight
 drawGame :: GameState -> Picture
 drawGame gameState =
   case gameState of
-    StartMenu -> drawMenu
+    StartMenu _ _ _ -> drawMenu
     Won pic -> drawWonScreen
     Lost pic -> drawLostScreen
     InGame lvl -> drawLevel lvl
     Flows flowLevel _ _ _ -> drawFlowScreen flowLevel
 
 drawMenu :: Picture
-drawMenu = (lettering "O") <> (lettering "K") <> translated 0 shiftY menu
+drawMenu =  translated 0 shiftY menu
   where 
     dy = 2
     shiftY = 2
@@ -240,7 +268,7 @@ drawLostScreen = translated 0 shiftY window
     where
     dy = 2
     shiftY = 1
-    line1 = translated 0 0 $ lettering "You won!"
+    line1 = translated 0 0 $ lettering "You lost!"
     line2 = translated 0 (-dy) $ lettering "Click anywhere to continue."
     window = line1 <> line2 <> blank
 
@@ -318,10 +346,10 @@ drawCellAt i j cell = translated x y
       --   Just p  -> drawPipe p
 
 data GameState
-  = StartMenu              -- ^ Start menu
-  | Won Picture            -- ^ Player won (connected pipes correctly)
-  | Lost Picture           -- ^ Player lost (water leakage)
-  | InGame Level           -- ^ Player is in game, Level is the level he plays
+  = StartMenu Level Level Level   -- ^ Start menu
+  | Won Picture                   -- ^ Player won (connected pipes correctly)
+  | Lost Picture                  -- ^ Player lost (water leakage)
+  | InGame Level                  -- ^ Player is in game, Level is the level he plays
   | Flows FlowLevel Int Double [(Int, Int)] -- ^ Player opened a valve
 
 -- | Pipe that connects sides specified by True
