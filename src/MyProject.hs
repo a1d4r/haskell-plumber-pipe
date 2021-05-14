@@ -1,17 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE UnicodeSyntax #-}
+{-# LANGUAGE UnicodeSyntax     #-}
 {-# OPTIONS_GHC -Wall #-}
 {-# OPTIONS_GHC -fdefer-typed-holes -fshow-hole-constraints -funclutter-valid-hole-fits #-}
 {-# OPTIONS_GHC -Wno-typed-holes #-}
 module MyProject where
 
 
-import CodeWorld
-import qualified Data.List.Split as Split
-import qualified System.Random as Random
+import           CodeWorld
 import qualified Data.List
-import qualified Data.Text as Text
+import qualified Data.List.Split as Split
 import qualified Data.Maybe
+import qualified Data.Text       as Text
+import qualified System.Random   as Random
 
 run :: IO ()
 run = do
@@ -26,47 +26,46 @@ run = do
 handleGame :: Event -> GameState -> GameState
 handleGame event gameState =
   case gameState of
-    StartMenu _  -> handleMenu gameState event
-    Won _ _  -> handleEndScreen gameState event
-    Lost _ _ -> handleEndScreen gameState event
-    InGame _ _ -> handleLevel gameState event
-    Flows _ _ _ _ _-> handleFlows gameState event
+    StartMenu _     -> handleMenu gameState event
+    Won _ _         -> handleEndScreen gameState event
+    Lost _ _        -> handleEndScreen gameState event
+    InGame _ _      -> handleLevel gameState event
+    Flows {}-> handleFlows gameState event
 
 
 
 --handle the main menu
 handleMenu :: GameState -> Event -> GameState
-handleMenu (StartMenu levels@(lvl1 : lvl2 : lvl3 : xs)) (PointerPress (x, y)) 
-  
-  = newState          -- (Flows (levelToFlowLevel level1) 1 1 [(0, 0)]) 
-  where 
-    newState 
-      | y >= -4 && y<=(-2) && (abs x) <= 4 = InGame lvl3 levels 
-      | y >= -1 && y<=1 && (abs x) <= 4 = InGame lvl2 levels
-      | y >= 2 && y<=4 && (abs x) <= 4 = InGame lvl1 levels
+handleMenu (StartMenu levels@(lvl1 : lvl2 : lvl3 : xs)) (PointerPress (x, y))
+  = newState          -- (Flows (levelToFlowLevel level1) 1 1 [(0, 0)])
+  where
+    newState
+      | y >= -4 && y<=(-2) && abs x <= 4 = InGame lvl3 levels
+      | y >= -1 && y<=1 && abs x <= 4 = InGame lvl2 levels
+      | y >= 2 && y<=4 && abs x <= 4 = InGame lvl1 levels
       | otherwise = StartMenu (lvl1 : lvl2 : lvl3 : xs)
-    
+
 handleMenu state _ = state
 
 handleEndScreen :: GameState -> Event -> GameState
-handleEndScreen (Won _ levels) (PointerPress _) = StartMenu levels
+handleEndScreen (Won _ levels) (PointerPress _)  = StartMenu levels
 handleEndScreen (Lost _ levels) (PointerPress _) = StartMenu levels
-handleEndScreen state _ = state
+handleEndScreen state _                          = state
 
 
 -- handle InGame State of the game
 handleLevel :: GameState -> Event -> GameState
 handleLevel (InGame lvl levels) (PointerPress (x, y)) = newGameState
-  where 
-    x' = (round (-y)) + size + 1
-    y' = (round (x)) + size + 1
-    size = fromIntegral $ (length lvl) `div` 2
+  where
+    x' = round (-y) + size + 1
+    y' = round (x) + size + 1
+    size = fromIntegral $ length lvl `div` 2
     newGameState = case (x', y') of
       (1, 1) -> Flows (levelToFlowLevel lvl) 1 1 [(0, 0)] levels
-      (i, j) -> InGame (updateAt i (updateAt j (rotateCell)) lvl) levels 
-    
+      (i, j) -> InGame (updateAt i (updateAt j rotateCell) lvl) levels
+
     rotateCell cell = case cell of
-      Nothing -> cell
+      Nothing   -> cell
       Just pipe -> Just (rotatePipeClockwise 1 pipe)
 
 handleLevel state _ = state
@@ -77,10 +76,10 @@ updateAt :: Int -> (a -> a) -> [a] -> [a]
 updateAt ind f list = if ind > 0 then newList else list
   where
     (begin, end) = splitAt (ind-1) list
-    newList = begin ++ newElem ++ (drop 1 end)
+    newList = begin ++ newElem ++ drop 1 end
     maybeElem = Data.Maybe.listToMaybe end
     newElem = case maybeElem of
-      Nothing -> []
+      Nothing      -> []
       Just oldElem -> [f oldElem]
 
 
@@ -88,12 +87,12 @@ updateAt ind f list = if ind > 0 then newList else list
 
 -- | Handle waterflow after played roated the valve
 handleFlows :: GameState -> Event -> GameState
-handleFlows (Flows flowLevel secsPassed t toCheck levels) (TimePassing dt) = 
-  if t + dt - fromIntegral secsPassed >= 0.95 then updatedState 
+handleFlows (Flows flowLevel secsPassed t toCheck levels) (TimePassing dt) =
+  if t + dt - fromIntegral secsPassed >= 0.95 then updatedState
     else Flows flowLevel secsPassed (t + dt) toCheck levels
   where
     updatedState =
-      if not isEnd then  Flows (fst wave) (floor (t + dt)) (t + dt) (snd wave) levels 
+      if not isEnd then  Flows (fst wave) (floor (t + dt)) (t + dt) (snd wave) levels
       else finalState
 
     -- | Check if new and old FlowLevels are equal
@@ -105,7 +104,7 @@ handleFlows (Flows flowLevel secsPassed t toCheck levels) (TimePassing dt) =
       then Won (drawFlowScreen flowLevel) levels
       else Lost (drawFlowScreen flowLevel) levels
 
-    -- | Executing next wave 
+    -- | Executing next wave
     wave = waveAlgorithm flowLevel toCheck []
 
     -- | Check if any pipe is leaking
@@ -113,18 +112,18 @@ handleFlows (Flows flowLevel secsPassed t toCheck levels) (TimePassing dt) =
     isLeaking (c : rest) =
       case c of
         FilledCell _ True -> True
-        _ -> isLeaking rest
+        _                 -> isLeaking rest
 
     -- | Check if player has reached the DestinationPipe
     reachedEnd [] = False
     reachedEnd (c : rest) =
       case c of
         FilledCell (Just DestinationPipe) _ -> True
-        _ -> reachedEnd rest
+        _                                   -> reachedEnd rest
 
 handleFlows state _ = state
 
--- | Try to update an element at a given position in a list.   
+-- | Try to update an element at a given position in a list.
 updateListAt :: Int -> (a -> a) -> [a] -> [a]
 updateListAt index changeTo list = leftPart ++ newA ++ rightPart
     where
@@ -141,11 +140,11 @@ getListElemAt index (_a : rest)
 
 
 
-waveAlgorithm 
+waveAlgorithm
   :: FlowLevel                    -- Level
-  -> [(Int, Int)]                 -- Indeces of nodes to check in the current iteration 
+  -> [(Int, Int)]                 -- Indeces of nodes to check in the current iteration
   -> [(Int, Int)]                 -- Accumulator of checked nodes
-  -> (FlowLevel, [(Int, Int)])    -- Return updated level and the list of indeces of nodes to check on the next iteration 
+  -> (FlowLevel, [(Int, Int)])    -- Return updated level and the list of indeces of nodes to check on the next iteration
 waveAlgorithm flowLevel [] acc = (flowLevel, acc)
 waveAlgorithm flowLevel ((rowIndex, colIndex) : rest) acc = waveAlgorithm updFlowLevel rest updAcc
   where
@@ -154,21 +153,21 @@ waveAlgorithm flowLevel ((rowIndex, colIndex) : rest) acc = waveAlgorithm updFlo
     changeRow = updateListAt colIndex changeCol
     changeCol c = case c of
                     FilledCell c' leaking -> FilledCell c' leaking
-                    EmptyCell c' -> FilledCell c' (isLeaking c')
+                    EmptyCell c'          -> FilledCell c' (isLeaking c')
 
     -- Check if the current node (pipe) is leaking
     isLeaking c' = isLeakingUp c' || isLeakingRight c' || isLeakingLeft c' || isLeakingDown c'
 
-    isLeakingUp (Just (ConnectivePipe True _ _ _)) = null (getNeighborIfConnected Above) 
+    isLeakingUp (Just (ConnectivePipe True _ _ _)) = null (getNeighborIfConnected Above)
     isLeakingUp _ = False
 
-    isLeakingRight (Just (ConnectivePipe _ True _ _)) = null (getNeighborIfConnected ToRight) 
+    isLeakingRight (Just (ConnectivePipe _ True _ _)) = null (getNeighborIfConnected ToRight)
     isLeakingRight _ = False
 
     isLeakingLeft (Just (ConnectivePipe _ _ _ True)) = null (getNeighborIfConnected ToLeft)
     isLeakingLeft _ = False
 
-    isLeakingDown (Just (ConnectivePipe _ _ True _)) = null (getNeighborIfConnected Below) 
+    isLeakingDown (Just (ConnectivePipe _ _ True _)) = null (getNeighborIfConnected Below)
     isLeakingDown _ = False
 
     -- Updating the list of nodes to check in the next iteration
@@ -203,7 +202,7 @@ waveAlgorithm flowLevel ((rowIndex, colIndex) : rest) acc = waveAlgorithm updFlo
 
     -- Get neighbor cell if it's connected to current one
     getNeighborIfConnected :: RelativePosition -> [(Int, Int)]
-    getNeighborIfConnected relPos = if arePipesConnected pipe1 pipe2 relPos then [calcPosition] else []
+    getNeighborIfConnected relPos = [calcPosition | arePipesConnected pipe1 pipe2 relPos]
       where
         pipe1 = case fmap (getListElemAt colIndex) (getListElemAt rowIndex flowLevel) of
                   Just (Just (EmptyCell (Just p))) -> p
@@ -211,10 +210,10 @@ waveAlgorithm flowLevel ((rowIndex, colIndex) : rest) acc = waveAlgorithm updFlo
                   _ -> ConnectivePipe False False False False
 
         calcPosition = case relPos of
-                        Above -> (rowIndex - 1, colIndex)
-                        Below -> (rowIndex + 1, colIndex)
+                        Above   -> (rowIndex - 1, colIndex)
+                        Below   -> (rowIndex + 1, colIndex)
                         ToRight -> (rowIndex, colIndex + 1)
-                        ToLeft -> (rowIndex, colIndex - 1)
+                        ToLeft  -> (rowIndex, colIndex - 1)
 
         pipe2 = case fmap (getListElemAt (snd calcPosition)) (getListElemAt (fst calcPosition) flowLevel) of
                 Just (Just (EmptyCell (Just p))) -> p
@@ -234,7 +233,7 @@ arePipesConnected (ConnectivePipe _ True _ _) (ConnectivePipe _ _ _ True) ToRigh
 arePipesConnected (ConnectivePipe _ _ True _) (ConnectivePipe True _ _ _) Below = True
 arePipesConnected (ConnectivePipe _ _ _ True) (ConnectivePipe _ True _ _) ToLeft = True
 
-arePipesConnected SourcePipe (ConnectivePipe _ _ _ True) ToRight = True 
+arePipesConnected SourcePipe (ConnectivePipe _ _ _ True) ToRight = True
 arePipesConnected (ConnectivePipe _ _ _ True) SourcePipe ToLeft = True
 
 arePipesConnected (ConnectivePipe _ True _ _) DestinationPipe ToRight = True
@@ -250,10 +249,10 @@ data RelativePosition = Above | Below | ToLeft | ToRight
 drawGame :: GameState -> Picture
 drawGame gameState =
   case gameState of
-    StartMenu  _ -> drawMenu
-    Won lvl _ -> drawWonScreen lvl
-    Lost lvl _ -> drawLostScreen lvl
-    InGame lvl _ -> drawLevel lvl
+    StartMenu  _            -> drawMenu
+    Won lvl _               -> drawWonScreen lvl
+    Lost lvl _              -> drawLostScreen lvl
+    InGame lvl _            -> drawLevel lvl
     Flows flowLevel _ _ _ _ -> drawFlowScreen flowLevel
 
 
@@ -262,25 +261,25 @@ drawGame gameState =
 -- draw the main menu
 drawMenu :: Picture
 drawMenu =  translated 0 shiftY menu
-  where 
+  where
     dy = 3
     shiftY = 3
-    
-    menu = positioned1 <> positioned2 <> positioned3 
-    
-    positioned1 = translated 0 0 level_1  
+
+    menu = positioned1 <> positioned2 <> positioned3
+
+    positioned1 = translated 0 0 level_1
     positioned2 = translated 0 (-dy) level_2
     positioned3 = translated 0 (2 * (-dy)) level_3
-    
-    level_1 = (lettering "Level 1 (Easy)") <> border1
-    level_2 = (lettering "Level 2 (Normal)") <> border2
-    level_3 = (lettering "Level 3 (Hard)") <> border3
-    
+
+    level_1 = lettering "Level 1 (Easy)" <> border1
+    level_2 = lettering "Level 2 (Normal)" <> border2
+    level_3 = lettering "Level 3 (Hard)" <> border3
+
     border1 = colored (lighter 0.4 blue) $ solidRectangle 8 2
     border2 = colored (lighter 0.4 blue) $ solidRectangle 8 2
     border3 = colored (lighter 0.4 blue) $ solidRectangle 8 2
-    
-    
+
+
 -- draw the screen when won
 drawWonScreen :: Picture -> Picture
 drawWonScreen lvl = translated 0 shiftY window <> border <> lvl
@@ -307,9 +306,9 @@ drawLostScreen lvl = translated 0 shiftY window <> border <> lvl
 
 -- draw the scene of waterflow
 drawFlowScreen :: FlowLevel -> Picture
-drawFlowScreen flowLevel = translated (-size) (size) (pictures listOfPictures)
+drawFlowScreen flowLevel = translated (-size) size (pictures listOfPictures)
   where
-    size = fromIntegral $ (length flowLevel)`div` 2
+    size = fromIntegral $ length flowLevel`div` 2
     listOfPictures
       = map (\(rowIndex, colIndex, fc)
              -> case fc of
@@ -327,9 +326,9 @@ levelWithIndeces = zipWith (\ rowIndex row
 
 -- | Draw current state of the game
 drawLevel :: Level -> Picture
-drawLevel level = translated (-size) (size) (pictures listOfPicture)
+drawLevel level = translated (-size) size (pictures listOfPicture)
   where
-    size = fromIntegral $ (length level)`div` 2
+    size = fromIntegral $ length level`div` 2
     listOfPicture = map(\(rowIndex, colIndex, cell)
                         -> drawCellAt colIndex (-rowIndex) cell)
                        (concat (levelWithIndeces level))
@@ -375,7 +374,7 @@ drawCellAt i j cell = translated x y
     y = fromIntegral j
     cellPicture =
       maybe blank drawPipe cell
-      -- case cell of 
+      -- case cell of
       --   Nothing -> blank
       --   Just p  -> drawPipe p
 
@@ -392,10 +391,10 @@ data GameState
 data Pipe
   = ConnectivePipe   -- ^ Pipes connecting several sides, open sides are marked as True
   {
-    up :: Bool,
+    up    :: Bool,
     right :: Bool,
-    down :: Bool,
-    left :: Bool
+    down  :: Bool,
+    left  :: Bool
   }
   | SourcePipe       -- ^ Horizontal source pipe (water flows from left to right)
   | DestinationPipe  -- ^ Horizontal destination pipe (water flows from left to right)
@@ -405,7 +404,7 @@ data Pipe
 -- | Some Cells are meant to be empty by designers of the level
 type Cell = Maybe Pipe
 
--- | A cell which can be either empty or filled with water 
+-- | A cell which can be either empty or filled with water
 data FlowCell
   = FilledCell Cell Bool
   | EmptyCell Cell
@@ -421,7 +420,7 @@ type FlowLevel = [[FlowCell]]
 emptyLevel :: (Int, Int) -> Level
 emptyLevel (n, m) = replicate n (replicate m Nothing)
 
--- | Convert string representation of level to level type 
+-- | Convert string representation of level to level type
 stringsToLevel :: [String] -> Level
 stringsToLevel = map (map strToCell . Split.splitOn " ")
   where
@@ -441,7 +440,7 @@ stringsToLevel = map (map strToCell . Split.splitOn " ")
         "┳" -> Just (ConnectivePipe False True True True)
         "┻" -> Just (ConnectivePipe True True False True)
         "╋" -> Just (ConnectivePipe True True True True)
-        _ -> Nothing
+        _   -> Nothing
 
 
 -- | Symbol representation for level1
