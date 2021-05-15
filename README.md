@@ -6,6 +6,8 @@
 
 ## Menu
   contains 3 levels that are generated from 3 predefined levels
+  ![Vim + ghcid + stack repl](images/Menu.jpg)
+  
   
 ## The game
   The player should:
