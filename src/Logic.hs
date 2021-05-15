@@ -57,7 +57,7 @@ handleLevel state _ = state
 -- | Handle waterflow after player rotated the valve
 handleFlows :: GameState -> Event -> GameState
 handleFlows (Flows flowLevel secsPassed t toCheck levels) (TimePassing dt) =
-  if t + dt - fromIntegral secsPassed >= 0.95 then updatedState
+  if t + dt - fromIntegral secsPassed >= 1 then updatedState
     else Flows flowLevel secsPassed (t + dt) toCheck levels
   where
     updatedState =
