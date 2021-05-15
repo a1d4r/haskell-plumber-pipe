@@ -1,6 +1,6 @@
 module Main where
 
-import           MyProject
+import           Game
 
 main :: IO ()
 main = run
