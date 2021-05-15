@@ -54,7 +54,7 @@ handleLevel (InGame lvl levels) (PointerPress (x, y)) = newGameState
 
 handleLevel state _ = state
 
--- | Handle waterflow after played roated the valve
+-- | Handle waterflow after player rotated the valve
 handleFlows :: GameState -> Event -> GameState
 handleFlows (Flows flowLevel secsPassed t toCheck levels) (TimePassing dt) =
   if t + dt - fromIntegral secsPassed >= 0.95 then updatedState
