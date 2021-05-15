@@ -2,19 +2,19 @@
 * Menu
 * The game itself
 * Animation of water in pipes
-* Won or lost message
+* Won or lost messages
 
 ## Menu
-  contains 3 levels that are generated from 3 predefined levels
+  Menu contains 3 levels for you to choose.
   ![Vim + ghcid + stack repl](images/Menu.jpg)
   
   
 ## The game
   The player should:
-    * Rotate all the pipes in such a way that all of them are connected and lead to the bath.
-    * To rotate the pipe, click on it
-    * When you want to check results, click on water tap
-    ![Vim + ghcid + stack repl](images/level.jpg)
+    - Rotate all the pipes in such a way that all of them are connected and lead to the bath.
+    - To rotate the pipe, click on it
+    - When you want to check results, click on water tap
+  ![Vim + ghcid + stack repl](images/level.jpg)
 
 
 ## Animation of water pass
@@ -27,5 +27,9 @@
   
 ## Win or lost messages
   Tells you the result of your try
+  
+  In case you won:
   ![Vim + ghcid + stack repl](images/won.jpg)
+  
+  In case you lost:
   ![Vim + ghcid + stack repl](images/lost.jpg)
